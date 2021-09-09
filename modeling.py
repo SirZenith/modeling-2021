@@ -33,40 +33,77 @@ class Record(object):
             data = pickle.load(f)
         return data
 
+    @classmethod
+    def to_pickled(cls, filename: str, data: "list[Record]"):
+        with open(filename, 'wb+') as f:
+            pickle.dump(data, f)
+
 
 class TransicationRecord(Record):
     """TransicationRecord records requests sent, or resource supplied in past 240
     weeks."""
-    SUPPLIER_COUNT = 420
+    SUPPLIER_COUNT = 402
 
     def __init__(
         self,
         src_type: SrcType,
-        data: "list[float]",
-        loop_vectors: "list[np.ndarray]"
+        supply_data: "list[float]",
+        loop_vectors: "list[np.ndarray]",
+        requests_data: "list[float]" = None,
     ):
         self.src_type = src_type
-        self.data = np.array(data)
-        self.freqs = np.array([abs(v @ self.data.T) for v in loop_vectors])
+        self.supply = np.array(supply_data)
+        self.requests = np.array(requests_data) if requests_data else None
+        self.mean = self.supply.mean()
+        self.freqs = np.array([
+            abs(v @ self.supply.T) / Record.WEEK_COUNT for v in loop_vectors
+        ])
+        self.supply_delta = None
+        self.supply_rate_data = None
+        self.supply_rate = None
+        self.supply_rate_var = None
 
     @classmethod
     def from_csv(
         cls,
-        filename: str,
+        supply_csv: str,
+        requests_csv: str,
         loop_vectors: "list[np.ndarray]"
     ) -> "list[TransicationRecord]":
         """read csv data (the first line of csv file should be table heade), and
         generate TransicationRecord list"""
         results = [None] * cls.SUPPLIER_COUNT
-        with open(filename, 'r', encoding='utf8') as f:
-            reader = csv.reader(f)
+        with open(supply_csv, 'r', encoding='utf8') as s:
+            reader = csv.reader(s)
             _header = next(reader)
             for row in reader:
                 src_t = SrcType(row[1])
                 sid = int(row[0][1:]) - 1
                 data = [float(i) for i in row[2:]]
                 results[sid] = TransicationRecord(src_t, data, loop_vectors)
+        with open(requests_csv, 'r', encoding='utf8') as r:
+            reader = csv.reader(r)
+            _header = next(reader)
+            for row in reader:
+                sid = int(row[0][1:]) - 1
+                data = [float(i) for i in row[2:]]
+                results[sid].requests = np.array(data)
+        for r in results:
+            r.update_state()
         return results
+
+    def update_state(self):
+        if self.requests is None:
+            return
+        mask = self.requests > 2.2e-16
+        if not np.any(mask):
+            return
+        self.supply_delta = (self.supply[mask] - self.requests[mask]).mean()
+        supply_rate = self.supply[mask] / self.requests[mask] * 100
+        supply_rate = np.array(supply_rate)
+        self.supply_rate_data = supply_rate
+        self.supply_rate = supply_rate.mean()
+        self.supply_rate_var = supply_rate.var()
 
 
 class TransportRecord(Record):
@@ -76,7 +113,7 @@ class TransportRecord(Record):
         self.data = np.array(data)
 
     @classmethod
-    def from_csv(cls, filename: str, _loop_vectors) -> "list[TransportRecord]":
+    def from_csv(cls, filename: str) -> "list[TransportRecord]":
         """read csv data (the first line of csv file should be table heade), and
         generate TransportRecord list"""
         results = [None] * cls.TRANSPORT_COUNT

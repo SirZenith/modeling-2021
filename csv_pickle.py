@@ -4,7 +4,7 @@ import pickle
 
 import numpy as np
 
-from modeling import TransicationRecord, TransportRecord
+from modeling import Record, TransicationRecord, TransportRecord
 
 
 def loop_gen(i: int):
@@ -14,6 +14,9 @@ def loop_gen(i: int):
 
 if __name__ == '__main__':
     data_dire = 'data'
+    requests_csv = os.path.join(data_dire, 'requests.csv')
+    supply_csv = os.path.join(data_dire, 'supply.csv')
+    transport_csv = os.path.join(data_dire, 'transport.csv')
     typing_table = {
         'requests': TransicationRecord,
         'supply': TransicationRecord,
@@ -25,13 +28,9 @@ if __name__ == '__main__':
         for i in range(1, TransicationRecord.WEEK_COUNT + 1)
     ]
 
-    for item in glob.glob(os.path.join(data_dire, '*.csv'),):
-        if not os.path.isfile(item):
-            continue
-        without_ext = os.path.splitext(item)[0]
-        out_name = without_ext + '.bin'
-        basename = os.path.basename(without_ext)
-        data = typing_table[basename].from_csv(item, loop_vectors)
-        with open(out_name, 'wb+') as f:
-            pickle.dump(data, f)
-        print(f'{item} -> {out_name}')
+    tc = TransicationRecord.from_csv(supply_csv, requests_csv, loop_vectors)
+    tp = TransportRecord.from_csv(transport_csv)
+
+    Record.to_pickled(os.path.join(data_dire, 'transication.bin'), tc)
+    Record.to_pickled(os.path.join(data_dire, 'transport.bin'), tp)
+    
