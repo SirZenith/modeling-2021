@@ -1,8 +1,9 @@
 import csv
 from enum import Enum
+import glob
 import os
 import pickle
-from typing import Callable
+from typing import Type
 
 import numpy as np
 
@@ -16,77 +17,74 @@ class SrcType(bytes, Enum):
         obj.price = price
         return obj
 
-    A = (0, 'A', 0.6, 120)
-    B = (1, 'B', 0.66, 110)
-    C = (2, 'C', 0.72, 100)
+    A = (0, 'A', 0.60, 1.2)
+    B = (1, 'B', 0.66, 1.1)
+    C = (2, 'C', 0.72, 1.0)
 
 
-class TransicationRecord(object):
-    """TransicationRecord is record of requests sent, or resource supplied in past 240
+class Record(object):
+    """General record type."""
+    WEEK_COUNT = 240
+
+    @classmethod
+    def from_pickled(cls, filename: str) -> "list[Record]":
+        """Reading record from pickled binary file."""
+        with open(filename, 'rb') as f:
+            data = pickle.load(f)
+        return data
+
+
+class TransicationRecord(Record):
+    """TransicationRecord records requests sent, or resource supplied in past 240
     weeks."""
+    SUPPLIER_COUNT = 420
 
-    def __init__(self, src_type: SrcType, data: "list[int]"):
+    def __init__(
+        self,
+        src_type: SrcType,
+        data: "list[float]",
+        loop_vectors: "list[np.ndarray]"
+    ):
         self.src_type = src_type
-        self.data = data
+        self.data = np.array(data)
+        self.freqs = np.array([abs(v @ self.data.T) for v in loop_vectors])
+
+    @classmethod
+    def from_csv(
+        cls,
+        filename: str,
+        loop_vectors: "list[np.ndarray]"
+    ) -> "list[TransicationRecord]":
+        """read csv data (the first line of csv file should be table heade), and
+        generate TransicationRecord list"""
+        results = [None] * cls.SUPPLIER_COUNT
+        with open(filename, 'r', encoding='utf8') as f:
+            reader = csv.reader(f)
+            _header = next(reader)
+            for row in reader:
+                src_t = SrcType(row[1])
+                sid = int(row[0][1:]) - 1
+                data = [float(i) for i in row[2:]]
+                results[sid] = TransicationRecord(src_t, data, loop_vectors)
+        return results
 
 
-class TransportRecord(object):
+class TransportRecord(Record):
+    TRANSPORT_COUNT = 8
+
     def __init__(self, data: "list[float]"):
-        self.data = data
+        self.data = np.array(data)
 
-
-def read_records_from_file(filename: str) -> "list[TransicationRecord]":
-    """read csv data (the first line of csv file should be table heade), and
-    generate TransicationRecord list"""
-    results = [None] * 402
-    with open(filename, 'r', encoding='utf8') as f:
-        reader = csv.reader(f)
-        _header = next(reader)
-        for row in reader:
-            src_type = SrcType(row[1])
-            supply_id = int(row[0][1:]) - 1
-            data = row[2:]
-            results[supply_id] = TransicationRecord(src_type, data)
-    return results
-
-
-def read_transport_from_file(filename: str) -> "list":
-    """read csv data (the first line of csv file should be table heade), and
-    generate TransportRecord list"""
-    results = [None] * 8
-    with open(filename, 'r', encoding='utf8') as f:
-        reader = csv.reader(f)
-        _header = next(reader)
-        for row in reader:
-            supply_id = int(row[0][1:]) - 1
-            data = row[1:]
-            results[supply_id] = TransportRecord(data)
-    return results
-    
-
-def try_read_persist_data(bin_file: str, src_file: str, read_operation: Callable[[str], list]) -> list:
-    """read pickled persistent data from bin_file if exists, else read data from
-    src_file by read_operation function, and pickle read data to bin_file."""
-    result = None
-    if os.path.exists(bin_file):
-        with open(bin_file, 'rb') as f:
-            result = pickle.load(f)
-    else:
-        result = read_operation(src_file)
-        with open(bin_file, 'wb+') as f:
-            pickle.dump(result, f)
-    return result
-
-
-if __name__ == '__main__':
-    data_dire = 'data'
-    requests_csv = os.path.join(data_dire, 'requests.csv')
-    supply_csv = os.path.join(data_dire, 'supply.csv')
-    transport_csv = os.path.join(data_dire, 'transport.csv')
-    requests_bin = os.path.join(data_dire, 'requests.bin')
-    supply_bin = os.path.join(data_dire, 'supply.bin')
-    transport_bin = os.path.join(data_dire, 'transport.bin')
-
-    requests = try_read_persist_data(requests_bin, requests_csv, read_records_from_file)
-    supply = try_read_persist_data(supply_bin, supply_csv, read_records_from_file)
-    transport = try_read_persist_data(transport_bin, transport_csv, read_transport_from_file)
+    @classmethod
+    def from_csv(cls, filename: str, _loop_vectors) -> "list[TransportRecord]":
+        """read csv data (the first line of csv file should be table heade), and
+        generate TransportRecord list"""
+        results = [None] * cls.TRANSPORT_COUNT
+        with open(filename, 'r', encoding='utf8') as f:
+            reader = csv.reader(f)
+            _header = next(reader)
+            for row in reader:
+                supply_id = int(row[0][1:]) - 1
+                data = [float(i) for i in row[1:]]
+                results[supply_id] = TransportRecord(data)
+        return results
