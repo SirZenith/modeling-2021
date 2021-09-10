@@ -8,8 +8,8 @@ class supplier {
         char type;
         array<double, 240> requests, supply, performance_rate;
 
-        // 供货量均值、供货量周期、履约率均值、履约率方差、表现分数、有订单的天数
-        double supply_mean, supply_cycle, performance_rate_mean, performance_rate_variance, score, active_days;
+        // 供货量均值、突发订单次数、履约率均值、履约率方差、表现分数、有订单的天数
+        double supply_mean, big_supply, performance_rate_mean, performance_rate_variance, score, active_days;
 };
 
 // 供货商列表
@@ -57,25 +57,15 @@ void getClassProperties() {
             i.performance_rate.end(), 
             0.0, 
             [&i](auto init, auto j) {
-                return init + (i.performance_rate_mean - j) * (i.performance_rate_mean - j);
+                return !j ? init : init + (i.performance_rate_mean - j) * (i.performance_rate_mean - j);
             }
         ) / i.active_days;
 
-        // i.supply_cycle = 0;
-        // double supply_cycle_tmp, supply_cycle_min = 0;
-        // for (auto j = 1; j < 120; ++j) {
-        //     for (auto k = 0; k < 240 - j; ++k)
-        //         supply_cycle_tmp += fabs(i.supply[k] - i.supply[k + j]);
-        //     supply_cycle_tmp /= (240 - j);
-        //     if (!supply_cycle_min || supply_cycle_min > supply_cycle_tmp) {
-        //         i.supply_cycle = j;
-        //         supply_cycle_min = supply_cycle_tmp;
-        //     } 
-        // }
-
-        i.supply_cycle = count_if(i.supply.begin(), i.supply.end(), [&i](auto& j) {
+        i.big_supply = count_if(i.supply.begin(), i.supply.end(), [&i](auto& j) {
             return j > i.supply_mean;
         });
+
+        i.score = pow(i.supply_mean, 2) * exp(i.performance_rate_mean) * (1 - i.performance_rate_variance) * i.active_days / 240;
     }
 }
 
@@ -83,14 +73,15 @@ int main() {
     readfile();
     getClassProperties();
     sort(supplierList.begin(), supplierList.end(), [](auto &i, auto &j){
-        return i.supply_mean < j.supply_mean;
+        return i.score > j.score;
     });
     for (auto &i: supplierList) {
-        cout << i.name << " " << i.active_days << " ";
-        printf("%c %lf %lf %lf %lf\n", 
+        cout << "|" << i.name << "|" << i.active_days << "|";
+        printf("%c|%lf|%lf|%lf|%lf|\n", 
             i.type,
-            i.supply_mean, i.supply_cycle,
-            i.performance_rate_mean, i.performance_rate_variance
+            i.supply_mean, 
+            i.performance_rate_mean, i.performance_rate_variance,
+            i.score
         );
     }
 
