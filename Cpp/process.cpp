@@ -65,7 +65,7 @@ void getClassProperties() {
             return j > i.supply_mean;
         });
 
-        i.score = pow(i.supply_mean, 2) * exp(i.performance_rate_mean) * (2 - i.performance_rate_variance) * i.active_days;
+        i.score = pow(i.supply_mean, 2) * exp(i.performance_rate_mean) * (1 - i.performance_rate_variance) * i.active_days / 240;
     }
 }
 
@@ -73,13 +73,13 @@ int main() {
     readfile();
     getClassProperties();
     sort(supplierList.begin(), supplierList.end(), [](auto &i, auto &j){
-        return i.score < j.score;
+        return i.score > j.score;
     });
     for (auto &i: supplierList) {
-        cout << i.name << " " << i.active_days << " ";
-        printf("%c %lf %lf %lf %lf %lf\n", 
+        cout << "|" << i.name << "|" << i.active_days << "|";
+        printf("%c|%lf|%lf|%lf|%lf|\n", 
             i.type,
-            i.supply_mean, i.big_supply,
+            i.supply_mean, 
             i.performance_rate_mean, i.performance_rate_variance,
             i.score
         );
