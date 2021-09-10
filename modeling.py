@@ -42,7 +42,7 @@ class Record(object):
 class TransicationRecord(Record):
     """TransicationRecord records requests sent, or resource supplied in past 240
     weeks.
-    
+
     Attribute:
         id: str, id of supplier.
         src_type: SrcType, source type of this supplier.
@@ -51,6 +51,8 @@ class TransicationRecord(Record):
         supply_delta: numpy.ndarray, difference between supply and request, only
                       non-zero requests are counted.
         supply_rate: numpy.ndarray, supply rate of each request.
+        supply_rate: numpy.ndarray, supply rate of all time, week with 0 request
+                     will take 1 (100%) as supply rate.
         long_term_supply_rate: float, ratio of sum of supply data to sum of requests.
         local_burst: numpy.ndarray, filte local huge requests.
     """
@@ -73,6 +75,7 @@ class TransicationRecord(Record):
         #     abs(v @ self.supply.T) / Record.WEEK_COUNT for v in loop_vectors
         # ])
         self.supply_delta = None
+        self.supply_rate = None
         self.supply_rate = None
         self.long_term_supply_rate = None
         self.local_burst = None
@@ -105,6 +108,12 @@ class TransicationRecord(Record):
             r.update_state()
         return results
 
+    @classmethod
+    def local_conv_vec(cls, local_len: int=0) -> np.ndarray:
+        if local_len <= 0:
+            local_len = cls.LOCAL_LEN
+        return np.array([1 / local_len for _ in range(local_len)])
+
     def update_state(self):
         if self.requests is None:
             return
@@ -113,15 +122,20 @@ class TransicationRecord(Record):
             return
         self.supply_delta = (self.supply[mask] - self.requests[mask]).mean()
         self.supply_rate = self.supply[mask] / self.requests[mask]
+
+        self.supply_rate_all = np.ones(self.requests.shape)
+        self.supply_rate_all[mask] = self.supply[mask] / self.requests[mask]
+        
         self.long_term_supply_rate = self.supply.sum() / self.requests.sum()
-        conv_local = np.array([1 / TransicationRecord.LOCAL_LEN for _ in range(TransicationRecord.LOCAL_LEN)])
+        
+        conv_local = TransicationRecord.local_conv_vec()
         local_mean = np.convolve(conv_local, self.requests, mode='same')
         self.local_burst = self.requests > local_mean + 20
 
 
 class TransportRecord(Record):
     """TransportRecord records transportation data.
-    
+
     Attribute:
         id: str, id of a transport company.
         data: numpy.ndarray, cost of this company is past weeks.
