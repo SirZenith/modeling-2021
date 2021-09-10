@@ -48,9 +48,6 @@ class TransicationRecord(Record):
         src_type: SrcType, source type of this supplier.
         supply: numpy.ndarray, array of supply data.
         requests: numpy.ndarray, array of requests data.
-        freqs: numpy.ndarray, arrat of frequency identify data, frequency closer
-               to frequency in under laying data will lead to smaller identify
-               data.
         supply_delta: numpy.ndarray, difference between supply and request, only
                       non-zero requests are counted.
         supply_rate: numpy.ndarray, supply rate of each request.
