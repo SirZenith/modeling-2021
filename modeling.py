@@ -46,11 +46,13 @@ class TransicationRecord(Record):
 
     def __init__(
         self,
+        id: str,
         src_type: SrcType,
         supply_data: "list[float]",
         loop_vectors: "list[np.ndarray]",
         requests_data: "list[float]" = None,
     ):
+        self.id = id
         self.src_type = src_type
         self.supply = np.array(supply_data)
         self.requests = np.array(requests_data) if requests_data else None
@@ -60,7 +62,7 @@ class TransicationRecord(Record):
         ])
         self.supply_delta = None
         self.supply_rate_data = None
-        self.supply_rate = None
+        self.long_term_supply_rate = None
         self.supply_rate_var = None
 
     @classmethod
@@ -80,7 +82,7 @@ class TransicationRecord(Record):
                 src_t = SrcType(row[1])
                 sid = int(row[0][1:]) - 1
                 data = [float(i) for i in row[2:]]
-                results[sid] = TransicationRecord(src_t, data, loop_vectors)
+                results[sid] = TransicationRecord(row[0], src_t, data, loop_vectors)
         with open(requests_csv, 'r', encoding='utf8') as r:
             reader = csv.reader(r)
             _header = next(reader)
@@ -99,10 +101,10 @@ class TransicationRecord(Record):
         if not np.any(mask):
             return
         self.supply_delta = (self.supply[mask] - self.requests[mask]).mean()
+        self.long_term_supply_rate = self.supply.sum() / self.requests.sum() * 100
         supply_rate = self.supply[mask] / self.requests[mask] * 100
         supply_rate = np.array(supply_rate)
         self.supply_rate_data = supply_rate
-        self.supply_rate = supply_rate.mean()
         self.supply_rate_var = supply_rate.var()
 
 
