@@ -14,9 +14,10 @@ if __name__ == '__main__':
     tc = TransicationRecord.from_pickled(transication_bin)
     tp = TransportRecord.from_pickled(transport_bin)
 
-    tc.sort(key=lambda r: r.long_term_supply_rate * r.supply.mean(), reverse=True)
-    target = tc[0]
+    # tc.sort(key=lambda r: r.long_term_supply_rate * r.supply.mean(), reverse=True)
+    target = tc[207]
 
+    
     # print(target.supply_rate_data)
     # mask = target.requests > 2.2e-16
     # print(target.supply[mask] - target.requests[mask])
