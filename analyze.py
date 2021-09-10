@@ -51,6 +51,14 @@ def write_csv(tc: "list[TransicationRecord]", filename: str):
                 target.supply_delta,
             ])
 
+def printinfo(target: TransicationRecord):
+    print(f'供应商 ID：{target.id}')
+    print(f'供货量均值：{target.supply.mean()}')
+    print(f'  订单总量：{target.requests[target.requests >= 1].size}')
+    print(f'供货差均值：{target.supply_delta}')
+    print(f'   履约率：{target.long_term_supply_rate}')
+    print(f'履约率方差：{target.supply_rate.var()}')
+
 
 if __name__ == '__main__':
     import argparse
@@ -64,10 +72,13 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--plot', default=None, type=int, metavar='<id>', help='plot data with given supplier id.')
-    parser.addargument('-o', '--output', default=None, type=str, metavar='<file name>', help='write data to csv file')
+    parser.add_argument('-o', '--output', default=None, type=str, metavar='<file name>', help='write data to csv file')
+    parser.add_argument('-i', '--info', default=None, type=int, metavar='<id>', help='print infomation with given id.')
 
     args = parser.parse_args()
     if args.plot is not None:
         make_plot(tc[args.plot - 1])
     if args.output is not None:
         write_csv(tc, args.output)
+    if args.info is not None:
+        printinfo(tc[args.info - 1])

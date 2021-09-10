@@ -14,7 +14,7 @@ class supplier {
 
 // 供货商列表
 array<supplier, 402> supplierList;
-
+map<char, double> mp;
 void readfile() {
     ifstream fin("cleanned-data/requests.mdb", ios::in);
     for (auto i = 0; i < 402; ++i) {
@@ -65,26 +65,29 @@ void getClassProperties() {
             return j > i.supply_mean;
         });
 
-        i.score = pow(i.supply_mean, 2) * exp(i.performance_rate_mean) * (1 - i.performance_rate_variance) * i.active_days / 240;
+        i.score = i.supply_mean / mp[i.type];
     }
+}
+
+void init() {
+    mp['A'] = 0.6;
+    mp['B'] = 0.66;
+    mp['C'] = 0.72;
 }
 
 int main() {
     readfile();
+    init();
     getClassProperties();
     sort(supplierList.begin(), supplierList.end(), [](auto &i, auto &j){
         return i.score > j.score;
     });
-    for (auto &i: supplierList) {
-        cout << "|" << i.name << "|" << i.active_days << "|";
-        printf("%c|%lf|%lf|%lf|%lf|\n", 
-            i.type,
-            i.supply_mean, 
-            i.performance_rate_mean, i.performance_rate_variance,
-            i.score
-        );
-    }
-
+    double sum = 0;
+    for (auto i = 0; i < 402; ++i) 
+        cout << supplierList[i].name << " " 
+            << supplierList[i].type << " "
+            << supplierList[i].score << " "
+            << (sum += supplierList[i].score) << endl;
     // for (auto &i: supplierList[228].performance_rate)
     //     cout << i << ", ";
     return 0;
