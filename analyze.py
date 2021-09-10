@@ -17,9 +17,6 @@ if __name__ == '__main__':
     tc.sort(key=lambda r: r.long_term_supply_rate * r.supply.mean(), reverse=True)
     target = tc[1]
 
-    # print(target.supply_rate_data)
-    # mask = target.requests > 2.2e-16
-    # print(target.supply[mask] - target.requests[mask])
     print(f'供应商 ID：{target.id}')
     print(f'供货量均值：{target.supply.mean()}')
     print(f'  订单总量：{target.requests[target.requests >= 1].size}')
