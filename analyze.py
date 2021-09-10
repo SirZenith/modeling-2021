@@ -62,7 +62,7 @@ def printinfo(target: TransicationRecord):
     print(f'供货量均值：{target.supply.mean()}')
     print(f'  订单总量：{target.requests[target.requests >= 1].size}')
     print(f'供货差均值：{target.supply_delta}')
-    print(f'   履约率：{target.long_term_supply_rate}')
+    print(f'   履约率：{target.supply_rate.mean()}')
     print(f'履约率方差：{target.supply_rate.var()}')
 
 
@@ -88,3 +88,5 @@ if __name__ == '__main__':
         write_csv(tc, args.output)
     if args.info is not None:
         printinfo(tc[args.info - 1])
+
+    print(tc[228].co)
