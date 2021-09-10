@@ -26,7 +26,7 @@ if __name__ == '__main__':
     print(f'供货差均值：{target.supply_delta}')
     print(f'     周期：{target.freqs.argmin() + 1}')
     print(f'   履约率：{target.long_term_supply_rate}')
-    print(f'履约率方差：{target.supply_rate.var}')
+    print(f'履约率方差：{target.supply_rate.var()}')
 
     plt.figure()
     plt.title("Info of {}".format(target.id))
