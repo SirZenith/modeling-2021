@@ -58,7 +58,7 @@ class TransicationRecord(Record):
         local_burst: numpy.ndarray, filte local huge requests.
     """
     SUPPLIER_COUNT = 402
-    LOCAL_LEN = 7
+    LOCAL_LEN = 20
 
     def __init__(
         self,
@@ -111,11 +111,11 @@ class TransicationRecord(Record):
     def update_state(self):
         if self.requests is None:
             return
-        mask = self.requests > 2.2e-16
+        mask = self.requests >= 1
         if not np.any(mask):
             return
         self.supply_delta = (self.supply[mask] - self.requests[mask]).mean()
-        self.supply_rate = np.array(self.supply[mask] / self.requests[mask])
+        self.supply_rate = self.supply[mask] / self.requests[mask]
         self.long_term_supply_rate = self.supply.sum() / self.requests.sum()
         conv_local = np.array([1 / TransicationRecord.LOCAL_LEN for _ in range(TransicationRecord.LOCAL_LEN)])
         local_mean = np.convolve(conv_local, self.requests, mode='same')
