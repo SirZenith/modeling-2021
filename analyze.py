@@ -15,7 +15,7 @@ if __name__ == '__main__':
     tp = TransportRecord.from_pickled(transport_bin)
 
     tc.sort(key=lambda r: r.long_term_supply_rate * r.supply.mean(), reverse=True)
-    target = tc[1]
+    target = tc[0]
 
     # print(target.supply_rate_data)
     # mask = target.requests > 2.2e-16
@@ -29,11 +29,16 @@ if __name__ == '__main__':
     print(f'履约率方差：{target.supply_rate.var}')
 
     plt.figure()
+    plt.title("Info of {}".format(target.id))
+    
     plt.subplot(3, 1, 1)
+    plt.title("Supply and requests")
     plt.plot(target.supply)
     plt.plot(target.requests)
 
+    
     plt.subplot(3, 1, 2)
+    plt.title("Info of performance rate")
     plt.plot(target.supply - target.requests)
 
     plt.subplot(3, 1, 3)
