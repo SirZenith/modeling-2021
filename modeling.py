@@ -55,34 +55,36 @@ class TransicationRecord(Record):
                       non-zero requests are counted.
         supply_rate: numpy.ndarray, supply rate of each request.
         long_term_supply_rate: float, ratio of sum of supply data to sum of requests.
+        local_burst: numpy.ndarray, filte local huge requests.
     """
     SUPPLIER_COUNT = 402
+    LOCAL_LEN = 7
 
     def __init__(
         self,
         id: str,
         src_type: SrcType,
         supply_data: "list[float]",
-        loop_vectors: "list[np.ndarray]",
+        # loop_vectors: "list[np.ndarray]"=None,
         requests_data: "list[float]" = None,
     ):
         self.id = id
         self.src_type = src_type
         self.supply = np.array(supply_data)
         self.requests = np.array(requests_data) if requests_data else None
-        self.freqs = np.array([
-            abs(v @ self.supply.T) / Record.WEEK_COUNT for v in loop_vectors
-        ])
+        # self.freqs = np.array([
+        #     abs(v @ self.supply.T) / Record.WEEK_COUNT for v in loop_vectors
+        # ])
         self.supply_delta = None
         self.supply_rate = None
         self.long_term_supply_rate = None
+        self.local_burst = None
 
     @classmethod
     def from_csv(
         cls,
         supply_csv: str,
         requests_csv: str,
-        loop_vectors: "list[np.ndarray]"
     ) -> "list[TransicationRecord]":
         """read csv data (the first line of csv file should be table heade), and
         generate TransicationRecord list"""
@@ -94,7 +96,7 @@ class TransicationRecord(Record):
                 src_t = SrcType(row[1])
                 sid = int(row[0][1:]) - 1
                 data = [float(i) for i in row[2:]]
-                results[sid] = TransicationRecord(row[0], src_t, data, loop_vectors)
+                results[sid] = TransicationRecord(row[0], src_t, data)
         with open(requests_csv, 'r', encoding='utf8') as r:
             reader = csv.reader(r)
             _header = next(reader)
@@ -113,8 +115,11 @@ class TransicationRecord(Record):
         if not np.any(mask):
             return
         self.supply_delta = (self.supply[mask] - self.requests[mask]).mean()
-        self.supply_rate = np.array(self.supply[mask] / self.requests[mask] * 100)
-        self.long_term_supply_rate = self.supply.sum() / self.requests.sum() * 100
+        self.supply_rate = np.array(self.supply[mask] / self.requests[mask])
+        self.long_term_supply_rate = self.supply.sum() / self.requests.sum()
+        conv_local = np.array([1 / TransicationRecord.LOCAL_LEN for _ in range(TransicationRecord.LOCAL_LEN)])
+        local_mean = np.convolve(conv_local, self.requests, mode='same')
+        self.local_burst = self.requests > local_mean + 20
 
 
 class TransportRecord(Record):

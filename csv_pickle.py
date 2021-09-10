@@ -23,12 +23,12 @@ if __name__ == '__main__':
         'transport': TransportRecord,
     }
 
-    loop_vectors = [
-        np.fromfunction(loop_gen(i), (TransicationRecord.WEEK_COUNT,))
-        for i in range(1, TransicationRecord.WEEK_COUNT + 1)
-    ]
+    # loop_vectors = [
+    #     np.fromfunction(loop_gen(i), (TransicationRecord.WEEK_COUNT,))
+    #     for i in range(1, TransicationRecord.WEEK_COUNT + 1)
+    # ]
 
-    tc = TransicationRecord.from_csv(supply_csv, requests_csv, loop_vectors)
+    tc = TransicationRecord.from_csv(supply_csv, requests_csv)
     tp = TransportRecord.from_csv(transport_csv)
 
     Record.to_pickled(os.path.join(data_dire, 'transication.bin'), tc)
