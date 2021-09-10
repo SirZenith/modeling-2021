@@ -8,6 +8,7 @@ from modeling import TransicationRecord, TransportRecord
 
 
 def performance(r: TransicationRecord):
+    """used globally for supplier evaluation."""
     return r.supply.mean()**2 * r.supply_rate.mean() * (2 - r.supply_rate.var()) * r.requests[r.requests > 0].size / r.requests.size
 
 
@@ -32,7 +33,7 @@ def make_plot(target: TransicationRecord):
 
 
 def write_csv(tc: "list[TransicationRecord]", filename: str):
-    """write data into csv file"""
+    """write data into csv file after sort input by performance function."""
     tc.sort(key=performance, reverse=True)
     with open(filename, 'w+', newline='') as f:
         writer = csv.writer(f)
@@ -62,8 +63,11 @@ if __name__ == '__main__':
     tp = TransportRecord.from_pickled(transport_bin)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--plot', default=None, type=int)
+    parser.add_argument('-p', '--plot', default=None, type=int, metavar='<id>', help='plot data with given supplier id.')
+    parser.addargument('-o', '--output', default=None, type=str, metavar='<file name>', help='write data to csv file')
 
     args = parser.parse_args()
     if args.plot is not None:
         make_plot(tc[args.plot - 1])
+    if args.output is not None:
+        write_csv(tc, args.output)
