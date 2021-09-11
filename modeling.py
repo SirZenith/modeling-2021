@@ -24,7 +24,7 @@ class SrcType(bytes, Enum):
 
 class BurstConfig(object):
     """BurstConfig recording burst features of a supplier
-    
+
     Attribute:
         burst_dura: int, how long does a burst last.
         cooling_dura: int, how long does cooling last.
@@ -75,7 +75,8 @@ class BurstConfig(object):
         if not np.any(durations):
             return
         burst_len = durations[:, 1] - durations[:, 0]
-        cooling_len = durations[1:, 0] - durations[:-1, 1] if len(durations) != 1 else 240
+        cooling_len = durations[1:, 0] - durations[:-
+                                                   1, 1] if len(durations) != 1 else 240
         self.burst_dura = np.median(burst_len)
         self.cooling_dura = np.median(cooling_len)
         self.burst_supply_count = durations[:, 2].mean()
@@ -132,7 +133,7 @@ class TransicationRecord(Record):
     def __init__(
         self,
         id: str,
-        id_int: int, 
+        id_int: int,
         src_type: SrcType,
         supply_data: "list[float]",
         # loop_vectors: "list[np.ndarray]"=None,
@@ -272,6 +273,7 @@ class TransportRecord(Record):
                 results[supply_id] = TransportRecord(row[0], data)
         return results
 
+
 class StatusOfWeek():
     '''
         self.inventory is a list of the inventory after you buy this week.
@@ -291,13 +293,20 @@ class StatusOfWeek():
         self.buy_next_time = np.zeros(402, dtype=int)
         self.burst_count = np.zeros(402, dtype=int)
         self.can_trans = TransportRecord.max_cap()
-    
+
     def producing(self):
         self.inventory -= StatusOfWeek.SOURCE_COST
-    
+
+    def reset(self):
+        self.reset_can_trans()
+        self.reset_requests()
+
     def reset_can_trans(self):
         self.can_trans = TransportRecord.max_cap()
     
+    def reset_requests(self):
+        self.requests[:] = 0
+
     def no_need_more(self, target_value: int):
         return self.inventory >= target_value or self.can_trans <= 0
 
@@ -310,7 +319,7 @@ class StatusOfWeek():
         self.expect_supply[id] = min(t.supply.mean(), self.can_trans)
         self.inventory += t.supply.mean() / t.src_type.unit_cost
         self.can_trans -= self.requests[id]
-    
+
     def request_to_burst(self, t: TransicationRecord):
         """sending a request to a burst-type supplier"""
         conf = t.burst_config
@@ -326,11 +335,13 @@ class StatusOfWeek():
         self.expect_supply[id] = conf.max_burst_output
         self.inventory += conf.max_burst_output / t.src_type.unit_cost
         self.burst_count[id] -= 1
-        self.buy_next_time[id] = self.current_week + conf.burst_dura // conf.burst_supply_count
+        self.buy_next_time[id] = self.current_week + \
+            conf.burst_dura // conf.burst_supply_count
         self.can_trans -= self.requests[id]
         if self.burst_count[id] <= 0:
             self.burst_count[id] = conf.burst_supply_count
             self.buy_next_time[id] = self.current_week + conf.cooling_dura
+
 
 if __name__ == '__main__':
     data_dire = 'data'

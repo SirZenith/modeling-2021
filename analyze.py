@@ -139,32 +139,20 @@ def question2(tc: "list[TransicationRecord]"):
     ed = TransicationRecord.WEEK_COUNT  # temporary putting this data
 
     for _ in range(24):
-        this_week.reset_can_trans()
-        for t in tc[:ed]:
+        this_week.reset()
+        for t in filter(lambda t: t.gini < 0.5, tc[:ed]):
             # normal type supplier
             if this_week.no_need_more(target_value):
                 break
-            elif t.gini > 0.5:
-                continue
             this_week.request_to_normal(t)
-            # print('{} {} {}'.format(
-            #     t.id_int,
-            #     this_week.requests[t.id_int],
-            #     this_week.inventory
-            # ))
 
-        for t in tc[:ed]:
+        for t in filter(lambda t: t.gini >= 0.5, tc[:ed]):
             # burst type supplier
             if this_week.no_need_more(target_value):
                 break
-            elif t.gini < 0.5 or this_week.buy_next_time[t.id_int] > this_week.current_week:
+            if this_week.buy_next_time[t.id_int] > this_week.current_week:
                 continue
             this_week.request_to_burst(t)
-            # print('{} {} {}'.format(
-            #     t.id_int,
-            #     this_week.requests[t.id_int],
-            #     this_week.inventory
-            # ))
 
         results.append(this_week.requests.copy())
         # print('{} {}'.format(
@@ -174,13 +162,16 @@ def question2(tc: "list[TransicationRecord]"):
         this_week.producing()
         this_week.current_week += 1
 
-        # print(this_week.inventory)
-        # print(this_week.requests[this_week.requests > 0])
-        # print(this_week.expect_supply[this_week.expect_supply > 0])
-    plt.figure()
-    for i in range(TransicationRecord.SUPPLIER_COUNT):
-        plt.plot([r[i] for r in results])
-    plt.show()
+    results = np.array(results)
+    results = results.T
+    # plt.figure()
+    # for r in results:
+    #     plt.plot(r)
+    # plt.show()
+    with open('ans/q2.csv', 'w+', encoding='utf8', newline='') as f:
+        writer = csv.writer(f)
+        for r in results:
+            writer.writerow(r)
     return results
 
 
