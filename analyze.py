@@ -10,6 +10,7 @@ from modeling import TransicationRecord, TransportRecord
 
 
 def check_pickle(src: "list[str]", targets: "list[str]"):
+    """automatically pickle data if any of src file is newer than target files"""
     src_time = np.array([os.path.getmtime(item) for item in src])
     targets_time = np.array([os.path.getmtime(item) for item in targets])
     for time in targets_time:
@@ -45,7 +46,7 @@ def make_plot(target: TransicationRecord):
 
     plt.subplot(4, 1, 4)
     plt.title('Local burst', fontsize='small')
-    plt.plot(target.local_burst)
+    plt.plot(target.request_burst)
     plt.show()
 
 
@@ -80,6 +81,7 @@ def printinfo(target: TransicationRecord):
 
 
 def rate_leap(target: TransicationRecord) -> np.ndarray:
+    """finding irregular leap point in supply data."""
     req_ratio = np.fromiter(
         (0 if v1 * v2 < 1 else v1 / v2 for v1, v2 in zip(target.requests[:-1], target.requests[1:])),
         dtype=float
@@ -92,12 +94,8 @@ def rate_leap(target: TransicationRecord) -> np.ndarray:
 
 def all_rate_leap(tc: "list[TransicationRecord]") -> "list[np.ndarray]":
     results = []
-    # conv_vec = TransicationRecord.local_conv_vec(25)
     for t in tc:
         diff = rate_leap(t)
-        # local = np.convolve(conv_vec, diff, mode='same')
-        # if np.any(np.abs(diff - local) > 0.2):
-            # results.append((i, diff))
         results.append(diff)
     return results
 

@@ -48,13 +48,16 @@ class TransicationRecord(Record):
         src_type: SrcType, source type of this supplier.
         supply: numpy.ndarray, array of supply data.
         requests: numpy.ndarray, array of requests data.
+        gini: float, Gini coeffecitent of supply data.
         supply_delta: numpy.ndarray, difference between supply and request, only
                       non-zero requests are counted.
         supply_rate: numpy.ndarray, supply rate of each request.
         supply_rate: numpy.ndarray, supply rate of all time, week with 0 request
                      will take 1 (100%) as supply rate.
         long_term_supply_rate: float, ratio of sum of supply data to sum of requests.
-        local_burst: numpy.ndarray, filte local huge requests.
+        request_burst: numpy.ndarray, filte local huge requests.
+        request_burst: numpy.ndarray, filte local leap of supply amount.
+        co: float, relevent coefficient. 
     """
     SUPPLIER_COUNT = 402
     LOCAL_LEN = 20
@@ -79,8 +82,8 @@ class TransicationRecord(Record):
         self.supply_rate = None
         self.supply_rate = None
         self.long_term_supply_rate = None
-        self.local_burst = None
-        self.co = None
+        self.request_burst = None
+        self.supply_burst = None
 
     @classmethod
     def from_csv(
@@ -107,7 +110,7 @@ class TransicationRecord(Record):
                 data = [float(i) for i in row[2:]]
                 results[sid].requests = np.array(data)
         for r in results:
-            r.update_state()
+            r.update_request_state()
         return results
 
     @classmethod
@@ -116,7 +119,7 @@ class TransicationRecord(Record):
             local_len = cls.LOCAL_LEN
         return np.array([1 / local_len for _ in range(local_len)])
 
-    def update_state(self):
+    def update_request_state(self):
         if self.requests is None:
             return
         mask = self.requests >= 1
@@ -130,9 +133,10 @@ class TransicationRecord(Record):
 
         self.long_term_supply_rate = self.supply.sum() / self.requests.sum()
 
-        conv_local = TransicationRecord.local_conv_vec()
-        local_mean = np.convolve(conv_local, self.requests, mode='same')
-        self.local_burst = self.requests > local_mean + 20
+        self.find_burst()
+
+    @property
+    def co(self):
         tmpmat = np.diag(np.ones(240)) + np.diag(np.ones(239),
                                                  k=1) + np.diag(np.ones(238), k=2)
         x = np.matmul(tmpmat, self.supply)
@@ -154,6 +158,13 @@ class TransicationRecord(Record):
         area_delta = 0.5 - area_supply
         return area_delta / 0.5, xarray, yarray
 
+    def find_burst(self):
+        conv_local = TransicationRecord.local_conv_vec()
+        r_local_mean = np.convolve(conv_local, self.requests, mode='same')
+        self.request_burst = self.requests > r_local_mean * 2
+        
+        s_local_mean = np.convolve(conv_local, self.supply, mode='same')
+        self.supply_burst = self.requests > r_local_mean * 2
 
 class TransportRecord(Record):
     """TransportRecord records transportation data.
