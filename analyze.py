@@ -1,10 +1,22 @@
 import csv
+import glob
 import os
 
 import matplotlib.pyplot as plt
 import numpy as np
 
+from csv_pickle import csv_pickle
 from modeling import TransicationRecord, TransportRecord
+
+
+def check_pickle(src: "list[str]", targets: "list[str]"):
+    src_time = np.array([os.path.getmtime(item) for item in src])
+    targets_time = np.array([os.path.getmtime(item) for item in targets])
+    for time in targets_time:
+        if np.any(src_time > time):
+            csv_pickle()
+            break
+    print('new pickle data were successfully made.')
 
 
 def performance(r: TransicationRecord):
@@ -96,6 +108,12 @@ if __name__ == '__main__':
     data_dire = 'data'
     transication_bin = os.path.join(data_dire, 'transication.bin')
     transport_bin = os.path.join(data_dire, 'transport.bin')
+
+    targets = [transication_bin, transication_bin]
+    src = glob.glob(os.path.join(data_dire, '*.csv')) + [
+        'csv_pickle.py', 'modeling.py'
+    ]
+    check_pickle(src, targets)
 
     tc = TransicationRecord.from_pickled(transication_bin)
     tp = TransportRecord.from_pickled(transport_bin)
