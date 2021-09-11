@@ -137,7 +137,7 @@ def question2(tc: "list[TransicationRecord]"):
     this_week = StatusOfWeek()
     tc.sort(key=performance, reverse=True)
 
-    ed = TransicationRecord.WEEK_COUNT  # temporary putting this data
+    ed = 50  # temporary putting this data
     gini_bound = 0.5
 
     for _ in range(24):
