@@ -18,8 +18,8 @@ def make_plot(target: TransicationRecord):
 
     plt.subplot(4, 1, 1)
     plt.title("Supply and requests", fontsize='small')
+    plt.plot(target.requests, 'r--')
     plt.plot(target.supply)
-    # plt.plot(target.requests)
     mean = target.supply.mean()
     plt.plot([mean] * target.supply.size)
 
@@ -113,6 +113,8 @@ if __name__ == '__main__':
                         metavar='<id>', help='compute leap value in requests amount')
     parser.add_argument('-L', '--all-leap', action='store_true', dest='all_leap',
                         help='drawing scatter plot for leap point count for all supplier')
+    parser.add_argument('-g', '--gini', default=None, type=int,
+                        metavar='<id>', help='compute Gini coeffectient of a given supplier')
 
     args = parser.parse_args()
     if args.plot is not None:
@@ -122,8 +124,8 @@ if __name__ == '__main__':
     if args.info is not None:
         printinfo(tc[args.info - 1])
 
-    tc.sort(key=lambda x: x.co, reverse=True)
-    print("{} {}".format(tc[1].id, tc[1].co))
+    # tc.sort(key=lambda x: x.co, reverse=True)
+    # print("{} {}".format(tc[1].id, tc[1].co))
     if args.leap is not None:
         target = tc[args.leap - 1]
         leap = rate_leap(target)
@@ -141,4 +143,10 @@ if __name__ == '__main__':
         for i in output:
             print(f'{i}: {leap_count[i - 1]}')
         print(np.mean(leap_count))
+        plt.show()
+    if args.gini is not None:
+        gini, x, y = tc[args.gini - 1].compute_gini()
+        print(gini)
+        plt.plot(x, y)
+        plt.plot(x, x) # 均衡曲线
         plt.show()

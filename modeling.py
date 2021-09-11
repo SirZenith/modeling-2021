@@ -74,6 +74,7 @@ class TransicationRecord(Record):
         # self.freqs = np.array([
         #     abs(v @ self.supply.T) / Record.WEEK_COUNT for v in loop_vectors
         # ])
+        self.gini, _, _ = self.compute_gini()
         self.supply_delta = None
         self.supply_rate = None
         self.supply_rate = None
@@ -110,7 +111,7 @@ class TransicationRecord(Record):
         return results
 
     @classmethod
-    def local_conv_vec(cls, local_len: int=0) -> np.ndarray:
+    def local_conv_vec(cls, local_len: int = 0) -> np.ndarray:
         if local_len <= 0:
             local_len = cls.LOCAL_LEN
         return np.array([1 / local_len for _ in range(local_len)])
@@ -126,16 +127,32 @@ class TransicationRecord(Record):
 
         self.supply_rate_all = np.ones(self.requests.shape)
         self.supply_rate_all[mask] = self.supply[mask] / self.requests[mask]
-        
+
         self.long_term_supply_rate = self.supply.sum() / self.requests.sum()
-        
+
         conv_local = TransicationRecord.local_conv_vec()
         local_mean = np.convolve(conv_local, self.requests, mode='same')
         self.local_burst = self.requests > local_mean + 20
-        tmpmat = np.diag(np.ones(240)) + np.diag(np.ones(239), k=1) + np.diag(np.ones(238), k=2)
+        tmpmat = np.diag(np.ones(240)) + np.diag(np.ones(239),
+                                                 k=1) + np.diag(np.ones(238), k=2)
         x = np.matmul(tmpmat, self.supply)
         y = self.supply / (self.requests+0.01)
         self.co = np.corrcoef(x, y)[0, 1]
+
+    def compute_gini(self):
+        # 计算数组累计值,从 0 开始
+        wealths = self.supply.copy()
+        np.append(wealths, 0)
+        wealths.sort()
+        cum_wealths = np.cumsum(wealths)
+        sum_wealths = cum_wealths[-1]
+        # 将数据转换为累积量在总量中的占比
+        xarray = np.arange(0, len(cum_wealths)) / (cum_wealths.size - 1)
+        yarray = cum_wealths / sum_wealths
+        area_supply = np.trapz(yarray, x=xarray)
+        # 总面积 0.5
+        area_delta = 0.5 - area_supply
+        return area_delta / 0.5, xarray, yarray
 
 
 class TransportRecord(Record):
