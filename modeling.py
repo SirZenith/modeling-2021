@@ -248,6 +248,7 @@ class TransportRecord(Record):
         data: numpy.ndarray, cost of this company is past weeks.
     """
     TRANSPORT_COUNT = 8
+    MAX_CAP = 6000
 
     def __init__(self, id: str, data: "list[float]"):
         self.id = id
@@ -274,6 +275,7 @@ class StatusOfWeek():
         self.expect_supply is a list of expect supply this week.
         self.current is a number of 0-24
         self.buy_next_time is a list of length 402, which record the supplier you should buy next time
+        self.can_trans
     '''
 
     def __init__(self):
@@ -283,23 +285,29 @@ class StatusOfWeek():
         self.current_week = 0
         self.buy_next_time = np.zeros(402, dtype=int)
         self.burst_count = np.zeros(402, dtype=int)
+        self.can_trans = TransportRecord.MAX_CAP * TransportRecord.TRANSPORT_COUNT
     
     def request_to_normal(self, t: TransicationRecord):
         """sending a request to a normal-type supplier"""
         id = t.id_int
-        self.requests[id] = t.requests.mean()
-        self.expect_supply[id] = t.supply.mean()
+        self.requests[id] = min(t.requests.mean(), self.can_trans)
+        self.expect_supply[id] = min(t.supply.mean(), self.can_trans)
         self.inventory += t.supply.mean() / t.src_type.unit_cost
+        self.can_trans -= self.requests[id]
     
-    def request_to_burst(self, t: TransicationRecord, conf: BurstConfig):
+    def request_to_burst(self, t: TransicationRecord):
         """sending a request to a burst-type supplier"""
         conf = t.burst_config
         id = t.id_int
-        self.requests[id] = conf.max_burst_output / t.supply_rate.mean()
+        requests = max(conf.max_burst_output, conf.max_burst_output / t.supply_rate.mean())
+        if requests > self.can_trans:
+            return
+        self.requests[id] = requests
         self.expect_supply[id] = conf.max_burst_output
         self.inventory += conf.max_burst_output / t.src_type.unit_cost
         self.burst_count[id] -= 1
         self.buy_next_time[id] = self.current_week + conf.burst_dura // conf.burst_supply_count
+        self.can_trans -= self.requests[id]
         if self.burst_count[id] <= 0:
             self.burst_count[id] = conf.burst_supply_count
             self.buy_next_time[id] = self.current_week + conf.cooling_dura

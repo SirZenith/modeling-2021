@@ -128,31 +128,40 @@ def all_rate_leap(tc: "list[TransicationRecord]") -> "list[np.ndarray]":
         results.append(diff)
     return results
 
+requests = []
+
 def question2(tc: "list[TransicationRecord]", target_value: float=3 * 2.82e4):
     this_week = StatusOfWeek()
     tc.sort(key=performance, reverse=True)
 
     ed = TransicationRecord.WEEK_COUNT # temporary putting this data
 
-    for t in tc[:ed]:
-        if this_week.inventory >= target_value:
-            break
-        elif t.gini > 0.5:
-            continue
-        this_week.request_to_normal(t)
-        # print(f"{t.id_int}, {this_week.requests[t.id_int]}, {this_week.inventory}")
+    for i in range(24):
+        this_week.can_trans = TransportRecord.TRANSPORT_COUNT * TransportRecord.MAX_CAP
+        for t in tc[:ed]:
+            if this_week.inventory >= target_value or this_week.can_trans <= 0:
+                break
+            elif t.gini > 0.5:
+                continue
+            this_week.request_to_normal(t)
+            # print(f"{t.id_int}, {this_week.requests[t.id_int]}, {this_week.inventory}")
+            
+        for t in tc[:ed]:
+            if this_week.inventory >= target_value or this_week.can_trans <= 0:
+                break
+            elif t.gini < 0.5 or this_week.buy_next_time[t.id_int] > this_week.current_week:
+                continue
+            this_week.request_to_burst(t)
         
-    for t in tc[:ed]:
-        if this_week.inventory >= target_value:
-            break
-        elif t.gini < 0.5 or this_week.buy_next_time[t.id_int] > this_week.current_week:
-            continue
-        this_week.request_to_burst(t)
-        # print("{} {} {}".format(id, this_week.requests[t.id_int], this_week.inventory))
-        
-    print(this_week.inventory)
-    print(this_week.requests[this_week.requests > 0])
-    print(this_week.expect_supply[this_week.expect_supply > 0])
+        requests.append(this_week.requests.copy())
+        print(f'{this_week.inventory} {TransportRecord.TRANSPORT_COUNT * TransportRecord.MAX_CAP - this_week.can_trans}')
+        this_week.inventory -= 2.82e4
+        this_week.current_week += 1
+            # print("{} {} {}".format(id, this_week.requests[t.id_int], this_week.inventory))
+            
+        # print(this_week.inventory)
+        # print(this_week.requests[this_week.requests > 0])
+        # print(this_week.expect_supply[this_week.expect_supply > 0])
 
 
 if __name__ == '__main__':
