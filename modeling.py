@@ -283,6 +283,26 @@ class StatusOfWeek():
         self.current_week = 0
         self.buy_next_time = np.zeros(402, dtype=int)
         self.burst_count = np.zeros(402, dtype=int)
+    
+    def request_to_normal(self, t: TransicationRecord):
+        """sending a request to a normal-type supplier"""
+        id = t.id_int
+        self.requests[id] = t.requests.mean()
+        self.expect_supply[id] = t.supply.mean()
+        self.inventory += t.supply.mean() / t.src_type.unit_cost
+    
+    def request_to_burst(self, t: TransicationRecord, conf: BurstConfig):
+        """sending a request to a burst-type supplier"""
+        conf = t.burst_config
+        id = t.id_int
+        self.requests[id] = conf.max_burst_output / t.supply_rate.mean()
+        self.expect_supply[id] = conf.max_burst_output
+        self.inventory += conf.max_burst_output / t.src_type.unit_cost
+        self.burst_count[id] -= 1
+        self.buy_next_time[id] = self.current_week + conf.burst_dura // conf.burst_supply_count
+        if self.burst_count[id] <= 0:
+            self.burst_count[id] = conf.burst_supply_count
+            self.buy_next_time[id] = self.current_week + conf.cooling_dura
 
 if __name__ == '__main__':
     data_dire = 'data'

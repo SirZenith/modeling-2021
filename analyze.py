@@ -130,33 +130,25 @@ def all_rate_leap(tc: "list[TransicationRecord]") -> "list[np.ndarray]":
 
 def question2(tc: "list[TransicationRecord]"):
     this_week = StatusOfWeek()
-    i = -1
     tc.sort(key=performance, reverse=True)
-    while this_week.inventory < 3 * 2.82e4 and i <= 400:
-        i += 1
-        if tc[i].gini > 0.5:
+
+    ed = TransicationRecord.WEEK_COUNT # temporary putting this data
+
+    for t in tc[:ed]:
+        if this_week.inventory >= 3 * 2.82e4:
+            break
+        elif t.gini > 0.5:
             continue
-        id = tc[i].id_int
-        this_week.requests[id] = tc[i].requests.mean()
-        this_week.expect_supply[id] = tc[i].supply.mean()
-        this_week.inventory += tc[i].supply.mean() / tc[i].src_type.unit_cost
-        print("{} {} {}".format(id, this_week.requests[id], this_week.inventory))
+        this_week.request_to_normal(t)
+        # print(f"{t.id_int}, {this_week.requests[t.id_int]}, {this_week.inventory}")
         
-    i = -1
-    while this_week.inventory < 3 * 2.82e4 and i <= 400:
-        i += 1
-        id = tc[i].id_int
-        if tc[i].gini < 0.5 or this_week.buy_next_time[id] > this_week.current_week:
+    for t in tc[:ed]:
+        if this_week.inventory >= 3 * 2.82e4:
+            break
+        elif t.gini < 0.5 or this_week.buy_next_time[t.id_int] > this_week.current_week:
             continue
-        this_week.requests[id] = tc[i].burst_config.max_burst_output / tc[i].supply_rate.mean()
-        this_week.expect_supply[id] = tc[i].burst_config.max_burst_output
-        this_week.inventory += tc[i].burst_config.max_burst_output / tc[i].src_type.unit_cost
-        this_week.burst_count[id] -= 1
-        this_week.buy_next_time[id] += tc[i].burst_config.burst_dura // tc[i].burst_config.burst_supply_count
-        if this_week.burst_count[id] <= 0:
-            this_week.burst_count[id] = tc[i].burst_config.burst_supply_count
-            this_week.buy_next_time[id] = this_week.current_week + tc[i].burst_config.cooling_dura
-        print("{} {} {}".format(id, this_week.requests[id], this_week.inventory))
+        this_week.request_to_burst(t)
+        # print("{} {} {}".format(id, this_week.requests[t.id_int], this_week.inventory))
         
     print(this_week.inventory)
     print(this_week.requests[this_week.requests > 0])
