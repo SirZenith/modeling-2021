@@ -109,24 +109,21 @@ class Record(object):
 class TransicationRecord(Record):
     """TransicationRecord records requests sent, or resource supplied in past 240
     weeks.
-
     Attribute:
         id: str, id of supplier.
+        id_int: int, id of supplier.
         src_type: SrcType, source type of this supplier.
         supply: numpy.ndarray, array of supply data.
         requests: numpy.ndarray, array of requests data.
-
         supply_delta: numpy.ndarray, difference between supply and request, only
                       non-zero requests are counted.
         supply_rate: numpy.ndarray, supply rate of each request.
         supply_rate: numpy.ndarray, supply rate of all time, week with 0 request
                      will take 1 (100%) as supply rate.
         long_term_supply_rate: float, ratio of sum of supply data to sum of requests.
-
         gini: float, Gini coeffecitent of supply data.
         request_burst: numpy.ndarray, filte local huge requests.
         request_burst: numpy.ndarray, filte local leap of supply amount.
-
         co: float, relevent coefficient. 
     """
     SUPPLIER_COUNT = 402
@@ -135,12 +132,14 @@ class TransicationRecord(Record):
     def __init__(
         self,
         id: str,
+        id_int: int, 
         src_type: SrcType,
         supply_data: "list[float]",
         # loop_vectors: "list[np.ndarray]"=None,
         requests_data: "list[float]" = None,
     ):
         self.id = id
+        self.id_int = id_int
         self.src_type = src_type
         self.supply = np.array(supply_data)
         self.requests = np.array(requests_data) if requests_data else None
@@ -174,7 +173,7 @@ class TransicationRecord(Record):
                 src_t = SrcType(row[1])
                 sid = int(row[0][1:]) - 1
                 data = [float(i) for i in row[2:]]
-                results[sid] = TransicationRecord(row[0], src_t, data)
+                results[sid] = TransicationRecord(row[0], sid, src_t, data)
         with open(requests_csv, 'r', encoding='utf8') as r:
             reader = csv.reader(r)
             _header = next(reader)
@@ -244,7 +243,6 @@ class TransicationRecord(Record):
 
 class TransportRecord(Record):
     """TransportRecord records transportation data.
-
     Attribute:
         id: str, id of a transport company.
         data: numpy.ndarray, cost of this company is past weeks.
@@ -269,6 +267,22 @@ class TransportRecord(Record):
                 results[supply_id] = TransportRecord(row[0], data)
         return results
 
+class StatusOfWeek():
+    '''
+        self.inventory is a list of the inventory after you buy this week.
+        self.requests is a list of each requests of 402 suppliers.
+        self.expect_supply is a list of expect supply this week.
+        self.current is a number of 0-24
+        self.buy_next_time is a list of length 402, which record the supplier you should buy next time
+    '''
+
+    def __init__(self):
+        self.inventory = 0
+        self.requests = np.zeros(402, dtype=int)
+        self.expect_supply = np.zeros(402, dtype=int)
+        self.current_week = 0
+        self.buy_next_time = np.zeros(402, dtype=int)
+        self.burst_count = np.zeros(402, dtype=int)
 
 if __name__ == '__main__':
     data_dire = 'data'
