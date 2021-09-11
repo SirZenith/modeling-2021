@@ -166,15 +166,7 @@ def question2(tc: "list[TransicationRecord]"):
 
     results = np.array(results)
     results = results.T
-<<<<<<< HEAD
-    print(len(results.T[results.T != np.zeros(24)]))
-    # plt.figure()
-    # for r in results:
-    #     plt.plot(r)
-    # plt.show()
-=======
     count = 0
->>>>>>> f4f4e065433feb3b6490766821084e9f511532ce
     with open('ans/q2.csv', 'w+', encoding='utf8', newline='') as f:
         writer = csv.writer(f)
         for r in results:
