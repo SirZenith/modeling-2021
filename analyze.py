@@ -28,17 +28,28 @@ def performance(r: TransicationRecord):
 
 def plot_all(tc: "list[TransicationRecord]"):
     plt.figure()
-    value = np.array([
-        sum(t.supply[i] / t.src_type.unit_cost for t in tc)
-        for i in range(TransicationRecord.WEEK_COUNT)
-    ])
-    plt.plot(value)
-    plt.plot([value.mean()] * TransicationRecord.WEEK_COUNT)
-    print(value.mean())
+    # value = np.array([
+    #     sum(t.supply[i] / t.src_type.unit_cost for t in tc)
+    #     for i in range(TransicationRecord.WEEK_COUNT)
+    # ])
+    # plt.plot(value)
+    # plt.plot([value.mean()] * TransicationRecord.WEEK_COUNT)
+    # print(value.mean())
     # for t in tc:
-        # if t.gini > 0.3:
-        #     continue
-        # plt.plot(t.supply)
+    # if t.gini > 0.3:
+    #     continuew
+    # plt.plot(t.supply)
+    sum = np.zeros(TransicationRecord.WEEK_COUNT)
+    for t in tc:
+        sum += t.supply
+    storage = [None] * TransicationRecord.WEEK_COUNT
+    curr = 0
+    for i, s in enumerate(sum):
+        curr += s
+        curr = max(s - 28200, 0)
+        storage[i] = s
+    print(len(storage))
+    plt.plot(storage)
     plt.show()
 
 
@@ -100,14 +111,15 @@ def printinfo(target: TransicationRecord):
 def rate_leap(target: TransicationRecord) -> np.ndarray:
     """finding irregular leap point in supply data."""
     req_ratio = np.fromiter(
-        (0 if v1 * v2 < 1 else v1 / v2 for v1, v2 in zip(target.requests[:-1], target.requests[1:])),
+        (0 if v1 * v2 < 1 else v1 / v2 for v1,
+         v2 in zip(target.requests[:-1], target.requests[1:])),
         dtype=float
     )
     rate_diff = np.diff(target.supply_rate_all)
     rate_diff[rate_diff > 0] = 0
     diff = np.abs(rate_diff) * req_ratio
     return diff
-    
+
 
 def all_rate_leap(tc: "list[TransicationRecord]") -> "list[np.ndarray]":
     results = []
@@ -150,7 +162,8 @@ if __name__ == '__main__':
                         help='drawing scatter plot for leap point count for all supplier')
     parser.add_argument('-g', '--gini', default=None, type=int,
                         metavar='<id>', help='compute Gini coeffectient of a given supplier')
-    parser.add_argument('-e', '--explosive', action='store_true', help='sort the supplier with its explosion')
+    parser.add_argument('-e', '--explosive', action='store_true',
+                        help='sort the supplier with its explosion')
 
     args = parser.parse_args()
     if args.all_plot:
@@ -174,29 +187,32 @@ if __name__ == '__main__':
         plt.show()
     if args.all_leap:
         leaps = all_rate_leap(tc)
-        leap_count = [np.count_nonzero(l > max(5 * l.mean(), 5)) for l in leaps]
+        leap_count = [np.count_nonzero(
+            l > max(5 * l.mean(), 5)) for l in leaps]
         plt.plot(np.array(leap_count))
         plt.title('Leap Count')
 
-        output  = sorted(range(1, len(leaps) + 1), key=lambda i: leap_count[i - 1])
+        output = sorted(range(1, len(leaps) + 1),
+                        key=lambda i: leap_count[i - 1])
         for i in output:
             print(f'{i}: {leap_count[i - 1]}')
         print(np.mean(leap_count))
         plt.show()
-    
+
     if args.gini is not None:
         gini, x, y = tc[args.gini - 1].compute_gini()
         print(gini)
         plt.plot(x, y)
-        plt.plot(x, x) # 均衡曲线
+        plt.plot(x, x)  # 均衡曲线
         plt.show()
 
     if args.explosive:
-        tc.sort(key=lambda x: x.gini * math.log(x.supply_rate.mean()) * x.supply.mean() * x.long_term_supply_rate, reverse=True)
+        tc.sort(key=lambda x: x.gini * math.log(x.supply_rate.mean())
+                * x.supply.mean() * x.long_term_supply_rate, reverse=True)
         for i in range(10):
             print("{} {} {} {} {}".format(
-                tc[i].id, 
-                tc[i].gini, 
+                tc[i].id,
+                tc[i].gini,
                 tc[i].burst_config.burst_dura,
                 tc[i].burst_config.cooling_dura,
                 tc[i].burst_config.max_burst_output
