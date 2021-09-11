@@ -130,6 +130,7 @@ def all_rate_leap(tc: "list[TransicationRecord]") -> "list[np.ndarray]":
 
 
 def question2(tc: "list[TransicationRecord]"):
+    """generate requests for question 2"""
     target_value = 3 * 2.82e4
 
     results = []
@@ -137,16 +138,17 @@ def question2(tc: "list[TransicationRecord]"):
     tc.sort(key=performance, reverse=True)
 
     ed = TransicationRecord.WEEK_COUNT  # temporary putting this data
+    gini_bound = 0.5
 
     for _ in range(24):
         this_week.reset()
-        for t in filter(lambda t: t.gini < 0.5, tc[:ed]):
+        for t in filter(lambda t: t.gini < gini_bound, tc[:ed]):
             # normal type supplier
             if this_week.no_need_more(target_value):
                 break
             this_week.request_to_normal(t)
 
-        for t in filter(lambda t: t.gini >= 0.5, tc[:ed]):
+        for t in filter(lambda t: t.gini >= gini_bound, tc[:ed]):
             # burst type supplier
             if this_week.no_need_more(target_value):
                 break
@@ -164,14 +166,14 @@ def question2(tc: "list[TransicationRecord]"):
 
     results = np.array(results)
     results = results.T
-    # plt.figure()
-    # for r in results:
-    #     plt.plot(r)
-    # plt.show()
+    count = 0
     with open('ans/q2.csv', 'w+', encoding='utf8', newline='') as f:
         writer = csv.writer(f)
         for r in results:
             writer.writerow(r)
+            if np.any(r):
+                count += 1
+    print(count)
     return results
 
 
