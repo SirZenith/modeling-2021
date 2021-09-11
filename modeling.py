@@ -289,7 +289,7 @@ class StatusOfWeek():
         self.current_week = 0
         self.buy_next_time = np.zeros(402, dtype=int)
         self.burst_count = np.zeros(402, dtype=int)
-        self.can_trans = TransportRecord.MAX_CAP
+        self.can_trans = TransportRecord.MAX_CAP * TransportRecord.TRANSPORT_COUNT
 
     def producing(self):
         self.inventory -= StatusOfWeek.SOURCE_COST
@@ -299,7 +299,7 @@ class StatusOfWeek():
         self.reset_requests()
 
     def reset_can_trans(self):
-        self.can_trans = TransportRecord.MAX_CAP
+        self.can_trans = TransportRecord.MAX_CAP * TransportRecord.TRANSPORT_COUNT
 
     def reset_requests(self):
         self.requests[:] = 0

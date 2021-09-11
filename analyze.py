@@ -126,7 +126,7 @@ def question2(tc: "list[TransicationRecord]", output: str, draw: bool):
     this_week = StatusOfWeek()
     tc.sort(key=performance, reverse=True)
 
-    ed = 36  # temporary putting this data
+    ed = 240  # temporary putting this data
     gini_bound = 0.5
 
     for _ in range(24):
@@ -148,7 +148,7 @@ def question2(tc: "list[TransicationRecord]", output: str, draw: bool):
         results.append(this_week.requests.copy())
         print('{} {}'.format(
             this_week.inventory,
-            TransportRecord.max_cap() - this_week.can_trans
+            TransportRecord.MAX_CAP * TransportRecord.TRANSPORT_COUNT - this_week.can_trans
         ))
         this_week.producing()
         if this_week.inventory < 0:
