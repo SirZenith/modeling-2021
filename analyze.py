@@ -45,8 +45,8 @@ def make_plot(target: TransicationRecord):
     plt.plot(target.supply_rate_all)
 
     plt.subplot(4, 1, 4)
-    plt.title('Local burst', fontsize='small')
-    plt.plot(target.request_burst)
+    plt.title('Supply burst', fontsize='small')
+    plt.plot(target.supply_burst)
     plt.show()
 
 

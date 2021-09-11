@@ -22,6 +22,62 @@ class SrcType(bytes, Enum):
     C = (2, 'C', 0.72, 1.0)
 
 
+class BurstConfig(object):
+    """BurstConfig recording burst features of a supplier"""
+
+    def __init__(self, s_burst: np.ndarray, s_data: np.ndarray):
+        self.burst_dura = TransicationRecord.WEEK_COUNT
+        self.cooling_dura = 0
+        self.max_burst_output = 0
+        self.burst_var = 0
+        self.burst_mean = 0
+        self.supply_rate_dec_fun = None
+
+        durations = self.find_burst_duration(s_burst)
+        self.settle_arguments(durations, s_data)
+
+    def find_burst_duration(self, s_burst: np.ndarray):
+        threadshold = 5
+        durations = np.empty((0, 3), dtype=int)
+        burst_st = 0
+        last_burst = 0
+        burst_count = 0
+        is_bursting = False
+        for i, item in enumerate(s_burst):
+            if not item:
+                if is_bursting and (i - last_burst > threadshold or i == s_burst.size - 1):
+                    durations = np.append(
+                        durations,
+                        ((burst_st, last_burst + 1, burst_count),),
+                        axis=0
+                    )
+                    is_bursting = False
+                    burst_count = 0
+                continue
+            last_burst = i
+            burst_count += 1
+            if not is_bursting:
+                is_bursting = True
+                burst_st = i
+        return durations
+
+    def settle_arguments(self, durations: np.ndarray, s_data: np.ndarray):
+        if not durations.size:
+            return
+        burst_len = durations[:, 1] - durations[:, 0]
+        cooling_len = durations[1:, 0] - durations[:-1, 1]
+        self.burst_dura = np.median(burst_len)
+        self.cooling_dura = np.median(cooling_len)
+
+        index = []
+        for st, ed, _count in durations:
+            index.extend([i for i in range(st, ed)])
+        burst_values = s_data[index]
+        self.max_burst_output = burst_values.max()
+        self.burst_var = burst_values.var()
+        self.burst_mean = burst_values.mean()
+
+
 class Record(object):
     """General record type."""
     WEEK_COUNT = 240
@@ -48,15 +104,18 @@ class TransicationRecord(Record):
         src_type: SrcType, source type of this supplier.
         supply: numpy.ndarray, array of supply data.
         requests: numpy.ndarray, array of requests data.
-        gini: float, Gini coeffecitent of supply data.
+
         supply_delta: numpy.ndarray, difference between supply and request, only
                       non-zero requests are counted.
         supply_rate: numpy.ndarray, supply rate of each request.
         supply_rate: numpy.ndarray, supply rate of all time, week with 0 request
                      will take 1 (100%) as supply rate.
         long_term_supply_rate: float, ratio of sum of supply data to sum of requests.
+
+        gini: float, Gini coeffecitent of supply data.
         request_burst: numpy.ndarray, filte local huge requests.
         request_burst: numpy.ndarray, filte local leap of supply amount.
+
         co: float, relevent coefficient. 
     """
     SUPPLIER_COUNT = 402
@@ -77,13 +136,16 @@ class TransicationRecord(Record):
         # self.freqs = np.array([
         #     abs(v @ self.supply.T) / Record.WEEK_COUNT for v in loop_vectors
         # ])
-        self.gini, _, _ = self.compute_gini()
+
         self.supply_delta = None
         self.supply_rate = None
         self.supply_rate = None
         self.long_term_supply_rate = None
+
+        self.gini, _, _ = self.compute_gini()
         self.request_burst = None
         self.supply_burst = None
+        self.burst_config = None
 
     @classmethod
     def from_csv(
@@ -134,6 +196,16 @@ class TransicationRecord(Record):
         self.long_term_supply_rate = self.supply.sum() / self.requests.sum()
 
         self.find_burst()
+        self.burst_config = BurstConfig(self.supply_burst, self.supply)
+
+    def find_burst(self):
+        """finding local burst of supply amount and request amount."""
+        conv_local = TransicationRecord.local_conv_vec()
+        r_local_mean = np.convolve(conv_local, self.requests, mode='same')
+        self.request_burst = self.requests > r_local_mean * 1.5
+
+        s_local_mean = np.convolve(conv_local, self.supply, mode='same')
+        self.supply_burst = self.supply > r_local_mean * 1.5
 
     @property
     def co(self):
@@ -146,7 +218,7 @@ class TransicationRecord(Record):
     def compute_gini(self):
         # 计算数组累计值,从 0 开始
         wealths = self.supply.copy()
-        np.append(wealths, 0)
+        wealths = np.append(wealths, 0)
         wealths.sort()
         cum_wealths = np.cumsum(wealths)
         sum_wealths = cum_wealths[-1]
@@ -158,13 +230,6 @@ class TransicationRecord(Record):
         area_delta = 0.5 - area_supply
         return area_delta / 0.5, xarray, yarray
 
-    def find_burst(self):
-        conv_local = TransicationRecord.local_conv_vec()
-        r_local_mean = np.convolve(conv_local, self.requests, mode='same')
-        self.request_burst = self.requests > r_local_mean * 2
-        
-        s_local_mean = np.convolve(conv_local, self.supply, mode='same')
-        self.supply_burst = self.requests > r_local_mean * 2
 
 class TransportRecord(Record):
     """TransportRecord records transportation data.
@@ -192,3 +257,13 @@ class TransportRecord(Record):
                 data = [float(i) for i in row[1:]]
                 results[supply_id] = TransportRecord(row[0], data)
         return results
+
+
+if __name__ == '__main__':
+    data_dire = 'data'
+    requests_csv = os.path.join(data_dire, 'requests.csv')
+    supply_csv = os.path.join(data_dire, 'supply.csv')
+    tc = TransicationRecord.from_csv(supply_csv, requests_csv)
+
+    target = tc[139]
+    print(target.burst_config.cooling_dura)
