@@ -111,6 +111,7 @@ class TransicationRecord(Record):
     weeks.
     Attribute:
         id: str, id of supplier.
+        id_int: int, id of supplier.
         src_type: SrcType, source type of this supplier.
         supply: numpy.ndarray, array of supply data.
         requests: numpy.ndarray, array of requests data.
@@ -131,12 +132,14 @@ class TransicationRecord(Record):
     def __init__(
         self,
         id: str,
+        id_int: int, 
         src_type: SrcType,
         supply_data: "list[float]",
         # loop_vectors: "list[np.ndarray]"=None,
         requests_data: "list[float]" = None,
     ):
         self.id = id
+        self.id_int = id_int
         self.src_type = src_type
         self.supply = np.array(supply_data)
         self.requests = np.array(requests_data) if requests_data else None
@@ -170,7 +173,7 @@ class TransicationRecord(Record):
                 src_t = SrcType(row[1])
                 sid = int(row[0][1:]) - 1
                 data = [float(i) for i in row[2:]]
-                results[sid] = TransicationRecord(row[0], src_t, data)
+                results[sid] = TransicationRecord(row[0], sid, src_t, data)
         with open(requests_csv, 'r', encoding='utf8') as r:
             reader = csv.reader(r)
             _header = next(reader)
@@ -272,13 +275,14 @@ class StatusOfWeek():
         self.current is a number of 0-24
         self.buy_next_time is a list of length 402, which record the supplier you should buy next time
     '''
-    
+
     def __init__(self):
-        self.inventory = None
-        self.requests = None
-        self.expect_supply = None
-        self.current_week = None
-        self.buy_next_time = None
+        self.inventory = 0
+        self.requests = np.zeros(402, dtype=int)
+        self.expect_supply = np.zeros(402, dtype=int)
+        self.current_week = 0
+        self.buy_next_time = np.zeros(402, dtype=int)
+        self.burst_count = np.zeros(402, dtype=int)
 
 if __name__ == '__main__':
     data_dire = 'data'
