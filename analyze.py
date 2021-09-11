@@ -128,14 +128,14 @@ def all_rate_leap(tc: "list[TransicationRecord]") -> "list[np.ndarray]":
         results.append(diff)
     return results
 
-def question2(tc: "list[TransicationRecord]"):
+def question2(tc: "list[TransicationRecord]", target_value: float=3 * 2.82e4):
     this_week = StatusOfWeek()
     tc.sort(key=performance, reverse=True)
 
     ed = TransicationRecord.WEEK_COUNT # temporary putting this data
 
     for t in tc[:ed]:
-        if this_week.inventory >= 3 * 2.82e4:
+        if this_week.inventory >= target_value:
             break
         elif t.gini > 0.5:
             continue
@@ -143,7 +143,7 @@ def question2(tc: "list[TransicationRecord]"):
         # print(f"{t.id_int}, {this_week.requests[t.id_int]}, {this_week.inventory}")
         
     for t in tc[:ed]:
-        if this_week.inventory >= 3 * 2.82e4:
+        if this_week.inventory >= target_value:
             break
         elif t.gini < 0.5 or this_week.buy_next_time[t.id_int] > this_week.current_week:
             continue
