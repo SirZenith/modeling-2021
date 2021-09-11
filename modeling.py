@@ -109,24 +109,20 @@ class Record(object):
 class TransicationRecord(Record):
     """TransicationRecord records requests sent, or resource supplied in past 240
     weeks.
-
     Attribute:
         id: str, id of supplier.
         src_type: SrcType, source type of this supplier.
         supply: numpy.ndarray, array of supply data.
         requests: numpy.ndarray, array of requests data.
-
         supply_delta: numpy.ndarray, difference between supply and request, only
                       non-zero requests are counted.
         supply_rate: numpy.ndarray, supply rate of each request.
         supply_rate: numpy.ndarray, supply rate of all time, week with 0 request
                      will take 1 (100%) as supply rate.
         long_term_supply_rate: float, ratio of sum of supply data to sum of requests.
-
         gini: float, Gini coeffecitent of supply data.
         request_burst: numpy.ndarray, filte local huge requests.
         request_burst: numpy.ndarray, filte local leap of supply amount.
-
         co: float, relevent coefficient. 
     """
     SUPPLIER_COUNT = 402
@@ -244,7 +240,6 @@ class TransicationRecord(Record):
 
 class TransportRecord(Record):
     """TransportRecord records transportation data.
-
     Attribute:
         id: str, id of a transport company.
         data: numpy.ndarray, cost of this company is past weeks.
@@ -269,6 +264,21 @@ class TransportRecord(Record):
                 results[supply_id] = TransportRecord(row[0], data)
         return results
 
+class StatusOfWeek():
+    '''
+        self.inventory is a list of the inventory after you buy this week.
+        self.requests is a list of each requests of 402 suppliers.
+        self.expect_supply is a list of expect supply this week.
+        self.current is a number of 0-24
+        self.buy_next_time is a list of length 402, which record the supplier you should buy next time
+    '''
+    
+    def __init__(self):
+        self.inventory = None
+        self.requests = None
+        self.expect_supply = None
+        self.current_week = None
+        self.buy_next_time = None
 
 if __name__ == '__main__':
     data_dire = 'data'
@@ -276,11 +286,5 @@ if __name__ == '__main__':
     supply_csv = os.path.join(data_dire, 'supply.csv')
     tc = TransicationRecord.from_csv(supply_csv, requests_csv)
 
-<<<<<<< HEAD
-    target = tc[139]
-    print(target.burst_config.cooling_dura)
-    
-=======
     # target = tc[139]
     # print(target.burst_config.cooling_dura)
->>>>>>> 1e17a4fa1256e76215aa7634c1b54c3cc462d370
