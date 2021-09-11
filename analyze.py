@@ -128,40 +128,60 @@ def all_rate_leap(tc: "list[TransicationRecord]") -> "list[np.ndarray]":
         results.append(diff)
     return results
 
-requests = []
 
-def question2(tc: "list[TransicationRecord]", target_value: float=3 * 2.82e4):
+def question2(tc: "list[TransicationRecord]"):
+    target_value = 3 * 2.82e4
+
+    results = []
     this_week = StatusOfWeek()
     tc.sort(key=performance, reverse=True)
 
-    ed = TransicationRecord.WEEK_COUNT # temporary putting this data
+    ed = TransicationRecord.WEEK_COUNT  # temporary putting this data
 
-    for i in range(24):
-        this_week.can_trans = TransportRecord.TRANSPORT_COUNT * TransportRecord.MAX_CAP
+    for _ in range(24):
+        this_week.reset_can_trans()
         for t in tc[:ed]:
-            if this_week.inventory >= target_value or this_week.can_trans <= 0:
+            # normal type supplier
+            if this_week.no_need_more(target_value):
                 break
             elif t.gini > 0.5:
                 continue
             this_week.request_to_normal(t)
-            # print(f"{t.id_int}, {this_week.requests[t.id_int]}, {this_week.inventory}")
-            
+            # print('{} {} {}'.format(
+            #     t.id_int,
+            #     this_week.requests[t.id_int],
+            #     this_week.inventory
+            # ))
+
         for t in tc[:ed]:
-            if this_week.inventory >= target_value or this_week.can_trans <= 0:
+            # burst type supplier
+            if this_week.no_need_more(target_value):
                 break
             elif t.gini < 0.5 or this_week.buy_next_time[t.id_int] > this_week.current_week:
                 continue
             this_week.request_to_burst(t)
-        
-        requests.append(this_week.requests.copy())
-        print(f'{this_week.inventory} {TransportRecord.TRANSPORT_COUNT * TransportRecord.MAX_CAP - this_week.can_trans}')
-        this_week.inventory -= 2.82e4
+            # print('{} {} {}'.format(
+            #     t.id_int,
+            #     this_week.requests[t.id_int],
+            #     this_week.inventory
+            # ))
+
+        results.append(this_week.requests.copy())
+        # print('{} {}'.format(
+        #     this_week.inventory,
+        #     TransportRecord.max_cap() - this_week.can_trans
+        # ))
+        this_week.producing()
         this_week.current_week += 1
-            # print("{} {} {}".format(id, this_week.requests[t.id_int], this_week.inventory))
-            
+
         # print(this_week.inventory)
         # print(this_week.requests[this_week.requests > 0])
         # print(this_week.expect_supply[this_week.expect_supply > 0])
+    plt.figure()
+    for i in range(TransicationRecord.SUPPLIER_COUNT):
+        plt.plot([r[i] for r in results])
+    plt.show()
+    return results
 
 
 if __name__ == '__main__':
@@ -199,6 +219,8 @@ if __name__ == '__main__':
                         metavar='<id>', help='compute Gini coeffectient of a given supplier')
     parser.add_argument('-e', '--explosive', action='store_true',
                         help='sort the supplier with its explosion')
+    parser.add_argument('-s', '--solve', default=None, type=int,
+                        metavar="<number>", help='give solution for give question')
 
     args = parser.parse_args()
     if args.all_plot:
@@ -253,4 +275,11 @@ if __name__ == '__main__':
                 tc[i].burst_config.max_burst_output
             ))
 
-    question2(tc)
+    if args.solve is not None:
+        solutions = (
+            None,
+            None,
+            question2,
+        )
+        solutions[args.solve](tc)
+        

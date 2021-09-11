@@ -250,6 +250,10 @@ class TransportRecord(Record):
     TRANSPORT_COUNT = 8
     MAX_CAP = 6000
 
+    @classmethod
+    def max_cap(cls):
+        return cls.TRANSPORT_COUNT * cls.MAX_CAP
+
     def __init__(self, id: str, data: "list[float]"):
         self.id = id
         self.data = np.array(data)
@@ -277,6 +281,7 @@ class StatusOfWeek():
         self.buy_next_time is a list of length 402, which record the supplier you should buy next time
         self.can_trans
     '''
+    SOURCE_COST = 2.82e4
 
     def __init__(self):
         self.inventory = 0
@@ -285,12 +290,23 @@ class StatusOfWeek():
         self.current_week = 0
         self.buy_next_time = np.zeros(402, dtype=int)
         self.burst_count = np.zeros(402, dtype=int)
-        self.can_trans = TransportRecord.MAX_CAP * TransportRecord.TRANSPORT_COUNT
+        self.can_trans = TransportRecord.max_cap()
     
+    def producing(self):
+        self.inventory -= StatusOfWeek.SOURCE_COST
+    
+    def reset_can_trans(self):
+        self.can_trans = TransportRecord.max_cap()
+    
+    def no_need_more(self, target_value: int):
+        return self.inventory >= target_value or self.can_trans <= 0
+
     def request_to_normal(self, t: TransicationRecord):
         """sending a request to a normal-type supplier"""
         id = t.id_int
-        self.requests[id] = min(t.requests.mean(), self.can_trans)
+        request = min(t.requests.mean(), self.can_trans)
+        request = round(request)
+        self.requests[id] = request
         self.expect_supply[id] = min(t.supply.mean(), self.can_trans)
         self.inventory += t.supply.mean() / t.src_type.unit_cost
         self.can_trans -= self.requests[id]
@@ -299,7 +315,11 @@ class StatusOfWeek():
         """sending a request to a burst-type supplier"""
         conf = t.burst_config
         id = t.id_int
-        requests = max(conf.max_burst_output, conf.max_burst_output / t.supply_rate.mean())
+        requests = max(
+            conf.max_burst_output,
+            conf.max_burst_output / t.supply_rate.mean()
+        )
+        requests = round(requests)
         if requests > self.can_trans:
             return
         self.requests[id] = requests
