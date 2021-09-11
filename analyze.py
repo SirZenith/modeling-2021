@@ -129,7 +129,7 @@ def all_rate_leap(tc: "list[TransicationRecord]") -> "list[np.ndarray]":
     return results
 
 
-def question2(tc: "list[TransicationRecord]"):
+def question2(tc: "list[TransicationRecord]", output: str):
     """generate requests for question 2"""
     target_value = 3 * 2.82e4
 
@@ -166,13 +166,18 @@ def question2(tc: "list[TransicationRecord]"):
 
     results = np.array(results)
     results = results.T
+    plt.figure()
+    for r in results:
+        plt.plot(r)
+    plt.show()
     count = 0
-    with open('ans/q2.csv', 'w+', encoding='utf8', newline='') as f:
-        writer = csv.writer(f)
-        for r in results:
-            writer.writerow(r)
-            if np.any(r):
-                count += 1
+    if output:
+        with open(output, 'w+', encoding='utf8', newline='') as f:
+            writer = csv.writer(f)
+            for r in results:
+                writer.writerow(r)
+                if np.any(r):
+                    count += 1
     print(count)
     return results
 
@@ -274,5 +279,5 @@ if __name__ == '__main__':
             None,
             question2,
         )
-        solutions[args.solve](tc)
+        solutions[args.solve](tc, args.output)
         
