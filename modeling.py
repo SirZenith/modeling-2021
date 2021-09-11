@@ -28,7 +28,7 @@ class BurstConfig(object):
     Attribute:
         burst_dura: int, how long does a burst last.
         cooling_dura: int, how long does cooling last.
-        max_burst_ouput: int, maximum value supplier can provide during a burst.
+        max_burst_output: int, maximum value supplier can provide during a burst.
         burst_var: float, variance of supply amount during burst.
         burst_mean: flaot, mean of supply amount during burst.
     """
