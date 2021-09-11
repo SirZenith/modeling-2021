@@ -86,9 +86,22 @@ int main() {
     for (auto i = 0; i < 402; ++i) 
         cout << supplierList[i].name << " " 
             << supplierList[i].type << " "
+            << supplierList[i].supply_mean << " "
             << supplierList[i].score << " "
             << (sum += supplierList[i].score) << endl;
-    // for (auto &i: supplierList[228].performance_rate)
+    // for (auto &i: supplierLst[228].performance_rate)
     //     cout << i << ", ";
+
+    // for (auto i = 0; i < 240; ++i) {
+    //     double a = 0, b = 0, c = 0;
+    //     for (auto &j: supplierList)
+    //         switch (j.type) {
+    //             case 'A': a += j.supply_mean; break;
+    //             case 'B': b += j.supply_mean; break;
+    //             case 'C': c += j.supply_mean; break;
+    //             default: break;
+    //         }
+    // }
+    
     return 0;
 }

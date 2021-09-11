@@ -79,6 +79,7 @@ class TransicationRecord(Record):
         self.supply_rate = None
         self.long_term_supply_rate = None
         self.local_burst = None
+        self.co = None
 
     @classmethod
     def from_csv(
@@ -131,6 +132,10 @@ class TransicationRecord(Record):
         conv_local = TransicationRecord.local_conv_vec()
         local_mean = np.convolve(conv_local, self.requests, mode='same')
         self.local_burst = self.requests > local_mean + 20
+        tmpmat = np.diag(np.ones(240)) + np.diag(np.ones(239), k=1) + np.diag(np.ones(238), k=2)
+        x = np.matmul(tmpmat, self.supply)
+        y = self.supply / (self.requests+0.01)
+        self.co = np.corrcoef(x, y)[0, 1]
 
 
 class TransportRecord(Record):
