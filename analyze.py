@@ -164,6 +164,7 @@ def question2(tc: "list[TransicationRecord]"):
 
     results = np.array(results)
     results = results.T
+    print(len(results.T[results.T != np.zeros(24)]))
     # plt.figure()
     # for r in results:
     #     plt.plot(r)
