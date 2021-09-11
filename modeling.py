@@ -23,7 +23,15 @@ class SrcType(bytes, Enum):
 
 
 class BurstConfig(object):
-    """BurstConfig recording burst features of a supplier"""
+    """BurstConfig recording burst features of a supplier
+    
+    Attribute:
+        burst_dura: int, how long does a burst last.
+        cooling_dura: int, how long does cooling last.
+        max_burst_ouput: int, maximum value supplier can provide during a burst.
+        burst_var: float, variance of supply amount during burst.
+        burst_mean: flaot, mean of supply amount during burst.
+    """
 
     def __init__(self, s_burst: np.ndarray, s_data: np.ndarray):
         self.burst_dura = TransicationRecord.WEEK_COUNT
@@ -31,7 +39,6 @@ class BurstConfig(object):
         self.max_burst_output = 0
         self.burst_var = 0
         self.burst_mean = 0
-        self.supply_rate_dec_fun = None
 
         durations = self.find_burst_duration(s_burst)
         self.settle_arguments(durations, s_data)
