@@ -6,19 +6,8 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 
-from csv_pickle import csv_pickle
+from csv_pickle import check_pickle
 from modeling import StatusOfWeek, TransicationRecord, TransportRecord
-
-
-def check_pickle(src: "list[str]", targets: "list[str]"):
-    """automatically pickle data if any of src file is newer than target files"""
-    src_time = np.array([os.path.getmtime(item) for item in src])
-    targets_time = np.array([os.path.getmtime(item) for item in targets])
-    for time in targets_time:
-        if np.any(src_time > time):
-            csv_pickle()
-            print('new pickle data were successfully made.')
-            break
 
 
 def performance(r: TransicationRecord):
@@ -199,7 +188,6 @@ if __name__ == '__main__':
     check_pickle(src, targets)
 
     tc = TransicationRecord.from_pickled(transication_bin)
-    tp = TransportRecord.from_pickled(transport_bin)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--plot', default=None, type=int,
@@ -235,9 +223,6 @@ if __name__ == '__main__':
     if args.info is not None:
         printinfo(tc[args.info - 1])
 
-    # tc.sort(key=lambda x: x.gini * math.log(x.supply_rate.mean()) * x.supply.mean() * x.long_term_supply_rate, reverse=True)
-    # for i in range(10):
-        # print("{} {}".format(tc[i].id, tc[i].gini))
     if args.leap is not None:
         target = tc[args.leap - 1]
         leap = rate_leap(target)
@@ -285,4 +270,3 @@ if __name__ == '__main__':
             question2,
         )
         solutions[args.solve](tc, args.output, args.image)
-        

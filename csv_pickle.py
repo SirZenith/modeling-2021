@@ -35,6 +35,17 @@ def csv_pickle():
     Record.to_pickled(os.path.join(data_dire, 'transication.bin'), tc)
     Record.to_pickled(os.path.join(data_dire, 'transport.bin'), tp)
 
+
+def check_pickle(src: "list[str]", targets: "list[str]"):
+    """automatically pickle data if any of src file is newer than target files"""
+    src_time = np.array([os.path.getmtime(item) for item in src])
+    targets_time = np.array([os.path.getmtime(item) for item in targets])
+    for time in targets_time:
+        if np.any(src_time > time):
+            csv_pickle()
+            print('new pickle data were successfully made.')
+            break
+
+
 if __name__ == '__main__':
     csv_pickle()
-    
