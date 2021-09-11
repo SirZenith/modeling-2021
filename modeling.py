@@ -28,6 +28,7 @@ class BurstConfig(object):
     Attribute:
         burst_dura: int, how long does a burst last.
         cooling_dura: int, how long does cooling last.
+        burst_supply_count: int, averange request count during a burst.
         max_burst_ouput: int, maximum value supplier can provide during a burst.
         burst_var: float, variance of supply amount during burst.
         burst_mean: flaot, mean of supply amount during burst.
@@ -36,6 +37,7 @@ class BurstConfig(object):
     def __init__(self, s_burst: np.ndarray, s_data: np.ndarray):
         self.burst_dura = TransicationRecord.WEEK_COUNT
         self.cooling_dura = 0
+        self.burst_supply_count = 0
         self.max_burst_output = 0
         self.burst_var = 0
         self.burst_mean = 0
@@ -44,6 +46,7 @@ class BurstConfig(object):
         self.settle_arguments(durations, s_data)
 
     def find_burst_duration(self, s_burst: np.ndarray):
+        """finding week index of the beginning and ending of burst."""
         threadshold = 5
         durations = np.empty((0, 3), dtype=int)
         burst_st = 0
@@ -69,12 +72,13 @@ class BurstConfig(object):
         return durations
 
     def settle_arguments(self, durations: np.ndarray, s_data: np.ndarray):
-        if not durations.size:
+        if not np.any(durations):
             return
         burst_len = durations[:, 1] - durations[:, 0]
-        cooling_len = durations[1:, 0] - durations[:-1, 1]
+        cooling_len = durations[1:, 0] - durations[:-1, 1] if len(durations) != 1 else 240
         self.burst_dura = np.median(burst_len)
         self.cooling_dura = np.median(cooling_len)
+        self.burst_supply_count = durations[:, 2].mean()
 
         index = []
         for st, ed, _count in durations:
@@ -212,7 +216,7 @@ class TransicationRecord(Record):
         self.request_burst = self.requests > r_local_mean * 1.5
 
         s_local_mean = np.convolve(conv_local, self.supply, mode='same')
-        self.supply_burst = self.supply > r_local_mean * 1.5
+        self.supply_burst = self.supply > s_local_mean * 1.5
 
     @property
     def co(self):
@@ -272,5 +276,5 @@ if __name__ == '__main__':
     supply_csv = os.path.join(data_dire, 'supply.csv')
     tc = TransicationRecord.from_csv(supply_csv, requests_csv)
 
-    target = tc[139]
-    print(target.burst_config.cooling_dura)
+    # target = tc[139]
+    # print(target.burst_config.cooling_dura)

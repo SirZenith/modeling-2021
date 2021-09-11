@@ -17,8 +17,8 @@ def check_pickle(src: "list[str]", targets: "list[str]"):
     for time in targets_time:
         if np.any(src_time > time):
             csv_pickle()
+            print('new pickle data were successfully made.')
             break
-    print('new pickle data were successfully made.')
 
 
 def performance(r: TransicationRecord):
