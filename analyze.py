@@ -129,7 +129,7 @@ def all_rate_leap(tc: "list[TransicationRecord]") -> "list[np.ndarray]":
     return results
 
 
-def question2(tc: "list[TransicationRecord]", output: str):
+def question2(tc: "list[TransicationRecord]", output: str, draw: bool):
     """generate requests for question 2"""
     target_value = 3 * 2.82e4
 
@@ -168,10 +168,6 @@ def question2(tc: "list[TransicationRecord]", output: str):
 
     results = np.array(results)
     results = results.T
-    plt.figure()
-    for r in results:
-        plt.plot(r)
-    plt.show()
     count = 0
     if output:
         with open(output, 'w+', encoding='utf8', newline='') as f:
@@ -181,6 +177,11 @@ def question2(tc: "list[TransicationRecord]", output: str):
                 if np.any(r):
                     count += 1
     print(count)
+    if draw:
+        plt.figure()
+        for r in results:
+            plt.plot(r)
+        plt.show()
     return results
 
 
@@ -221,6 +222,8 @@ if __name__ == '__main__':
                         help='sort the supplier with its explosion')
     parser.add_argument('-s', '--solve', default=None, type=int,
                         metavar="<number>", help='give solution for give question')
+    parser.add_argument('-D', '--image', action='store_true',
+                        help='drawing image for solution')
 
     args = parser.parse_args()
     if args.all_plot:
@@ -281,5 +284,5 @@ if __name__ == '__main__':
             None,
             question2,
         )
-        solutions[args.solve](tc, args.output)
+        solutions[args.solve](tc, args.output, args.image)
         
