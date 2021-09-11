@@ -274,3 +274,4 @@ if __name__ == '__main__':
 
     target = tc[139]
     print(target.burst_config.cooling_dura)
+    
