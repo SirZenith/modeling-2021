@@ -174,4 +174,10 @@ if __name__ == '__main__':
     if args.explosive:
         tc.sort(key=lambda x: x.gini * math.log(x.supply_rate.mean()) * x.supply.mean() * x.long_term_supply_rate, reverse=True)
         for i in range(10):
-            print("{} {}".format(tc[i].id, tc[i].gini))
+            print("{} {} {} {} {}".format(
+                tc[i].id, 
+                tc[i].gini, 
+                tc[i].burst_config.burst_dura,
+                tc[i].burst_config.cooling_dura,
+                tc[i].burst_config.max_burst_output
+            ))
