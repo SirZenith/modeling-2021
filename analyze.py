@@ -137,7 +137,7 @@ def question2(tc: "list[TransicationRecord]", output: str):
     this_week = StatusOfWeek()
     tc.sort(key=performance, reverse=True)
 
-    ed = 50  # temporary putting this data
+    ed = 36  # temporary putting this data
     gini_bound = 0.5
 
     for _ in range(24):
@@ -157,11 +157,13 @@ def question2(tc: "list[TransicationRecord]", output: str):
             this_week.request_to_burst(t)
 
         results.append(this_week.requests.copy())
-        # print('{} {}'.format(
-        #     this_week.inventory,
-        #     TransportRecord.max_cap() - this_week.can_trans
-        # ))
+        print('{} {}'.format(
+            this_week.inventory,
+            TransportRecord.max_cap() - this_week.can_trans
+        ))
         this_week.producing()
+        if this_week.inventory < 0:
+            raise ValueError
         this_week.current_week += 1
 
     results = np.array(results)
