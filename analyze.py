@@ -19,7 +19,7 @@ def make_plot(target: TransicationRecord):
     plt.subplot(4, 1, 1)
     plt.title("Supply and requests", fontsize='small')
     plt.plot(target.supply)
-    plt.plot(target.requests)
+    # plt.plot(target.requests)
     mean = target.supply.mean()
     plt.plot([mean] * target.supply.size)
 
@@ -67,22 +67,13 @@ def printinfo(target: TransicationRecord):
     print(f'履约率方差：{target.supply_rate.var()}')
 
 
-def circle_map(x):
-    if x > 1:
-        x = 1 - x
-    elif x > 0:
-        x = 1 - 1 / x
-    else:
-        raise ValueError('input argument should be greater than zero')
-    return np.exp(x)
-
-
 def rate_leap(target: TransicationRecord) -> np.ndarray:
     req_ratio = np.fromiter(
-        (0 if v1 * v2 < 1 else v2 / v1 for v1, v2 in zip(target.requests[:-1], target.requests[1:])),
+        (0 if v1 * v2 < 1 else v1 / v2 for v1, v2 in zip(target.requests[:-1], target.requests[1:])),
         dtype=float
     )
     rate_diff = np.diff(target.supply_rate_all)
+    rate_diff[rate_diff > 0] = 0
     diff = np.abs(rate_diff) * req_ratio
     return diff
     
@@ -134,17 +125,17 @@ if __name__ == '__main__':
         target = tc[args.leap - 1]
         leap = rate_leap(target)
         plt.plot(leap)
-        plt.plot(np.array([leap.mean()] * leap.size))
+        plt.plot(np.array([max(5 * leap.mean(), 5)] * leap.size))
         plt.title(target.id)
         plt.show()
     if args.all_leap:
         leaps = all_rate_leap(tc)
-        leap_count = [np.count_nonzero(l > 20) for l in leaps]
+        leap_count = [np.count_nonzero(l > max(5 * l.mean(), 5)) for l in leaps]
         plt.plot(np.array(leap_count))
         plt.title('Leap Count')
 
         output  = sorted(range(1, len(leaps) + 1), key=lambda i: leap_count[i - 1])
         for i in output:
-            print(i)
-
+            print(f'{i}: {leap_count[i - 1]}')
+        print(np.mean(leap_count))
         plt.show()
