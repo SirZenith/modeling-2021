@@ -1,6 +1,7 @@
 import csv
 import glob
 import os
+import math
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -131,6 +132,7 @@ if __name__ == '__main__':
                         help='drawing scatter plot for leap point count for all supplier')
     parser.add_argument('-g', '--gini', default=None, type=int,
                         metavar='<id>', help='compute Gini coeffectient of a given supplier')
+    parser.add_argument('-e', '--explosive', action='store_true', help='sort the supplier with its explosion')
 
     args = parser.parse_args()
     if args.plot is not None:
@@ -140,8 +142,9 @@ if __name__ == '__main__':
     if args.info is not None:
         printinfo(tc[args.info - 1])
 
-    # tc.sort(key=lambda x: x.co, reverse=True)
-    # print("{} {}".format(tc[1].id, tc[1].co))
+    # tc.sort(key=lambda x: x.gini * math.log(x.supply_rate.mean()) * x.supply.mean() * x.long_term_supply_rate, reverse=True)
+    # for i in range(10):
+        # print("{} {}".format(tc[i].id, tc[i].gini))
     if args.leap is not None:
         target = tc[args.leap - 1]
         leap = rate_leap(target)
@@ -160,9 +163,15 @@ if __name__ == '__main__':
             print(f'{i}: {leap_count[i - 1]}')
         print(np.mean(leap_count))
         plt.show()
+    
     if args.gini is not None:
         gini, x, y = tc[args.gini - 1].compute_gini()
         print(gini)
         plt.plot(x, y)
         plt.plot(x, x) # 均衡曲线
         plt.show()
+
+    if args.explosive:
+        tc.sort(key=lambda x: x.gini * math.log(x.supply_rate.mean()) * x.supply.mean() * x.long_term_supply_rate, reverse=True)
+        for i in range(10):
+            print("{} {}".format(tc[i].id, tc[i].gini))
