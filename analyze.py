@@ -17,13 +17,29 @@ def check_pickle(src: "list[str]", targets: "list[str]"):
     for time in targets_time:
         if np.any(src_time > time):
             csv_pickle()
+            print('new pickle data were successfully made.')
             break
-    print('new pickle data were successfully made.')
 
 
 def performance(r: TransicationRecord):
     """used globally for supplier evaluation."""
     return r.supply.mean()**2 * np.exp(r.supply_rate.mean()) * (2 - r.supply_rate.var()) * r.requests[r.requests > 0].size / r.requests.size
+
+
+def plot_all(tc: "list[TransicationRecord]"):
+    plt.figure()
+    value = np.array([
+        sum(t.supply[i] / t.src_type.unit_cost for t in tc)
+        for i in range(TransicationRecord.WEEK_COUNT)
+    ])
+    plt.plot(value)
+    plt.plot([value.mean()] * TransicationRecord.WEEK_COUNT)
+    print(value.mean())
+    # for t in tc:
+        # if t.gini > 0.3:
+        #     continue
+        # plt.plot(t.supply)
+    plt.show()
 
 
 def make_plot(target: TransicationRecord):
@@ -120,6 +136,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--plot', default=None, type=int,
                         metavar='<id>', help='plot data with given supplier id.')
+    parser.add_argument('-P', '--all-plot', action='store_true', dest='all_plot',
+                        help='plot data with given supplier id.')
     parser.add_argument('-o', '--output', default=None, type=str,
                         metavar='<file name>', help='write data to csv file')
     parser.add_argument('-i', '--info', default=None, type=int,
@@ -135,7 +153,9 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--explosive', action='store_true', help='sort the supplier with its explosion')
 
     args = parser.parse_args()
-    if args.plot is not None:
+    if args.all_plot:
+        plot_all(tc)
+    elif args.plot is not None:
         make_plot(tc[args.plot - 1])
     if args.output is not None:
         write_csv(tc, args.output)
