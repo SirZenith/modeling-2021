@@ -131,7 +131,7 @@ def requests(
     this_week = StatusOfWeek(weekly_source_cost)
     tc.sort(key=performance, reverse=True)
 
-    ed = 36  # temporary putting this data
+    ed = 402  # temporary putting this data
     gini_bound = 0.5
 
     for _ in range(24):
