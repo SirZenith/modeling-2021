@@ -210,6 +210,7 @@ class TransicationRecord(Record):
         self.burst_config = BurstConfig(self.supply_burst, self.supply)
 
     def find_burst(self):
+        import matplotlib.pyplot as plt
         """finding local burst of supply amount and request amount."""
         conv_local = TransicationRecord.local_conv_vec()
         r_local_mean = np.convolve(conv_local, self.requests, mode='same')
@@ -217,6 +218,8 @@ class TransicationRecord(Record):
 
         s_local_mean = np.convolve(conv_local, self.supply, mode='same')
         self.supply_burst = self.supply > s_local_mean * 1.5
+        plt.plot(s_local_mean)
+        plt.show()
 
     @property
     def co(self):

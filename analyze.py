@@ -138,7 +138,7 @@ def question2(tc: "list[TransicationRecord]", output: str):
     tc.sort(key=performance, reverse=True)
 
     ed = 36  # temporary putting this data
-    gini_bound = 0.5
+    gini_bound = 0.4
 
     for _ in range(24):
         this_week.reset()
