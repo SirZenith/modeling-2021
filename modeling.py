@@ -4,7 +4,7 @@ import enum
 import glob
 import os
 import pickle
-from typing import Type
+from typing import Callable, Type
 
 import numpy as np
 
@@ -344,8 +344,15 @@ class TransportDistributor(object):
     """TransportDistributor is used to distribute transport task among transport
     companies."""
 
-    def __init__(self, companies: "list[TransportRecord]"):
-        self.companies = sorted(companies, key=lambda t: t.data.mean())
+    def __init__(
+        self,
+        companies: "list[TransportRecord]",
+        performance: "Callable[[TransicationRecord], float]"=None
+    ):
+        if not performance:
+            def performance(t):
+                return t.data.mean()
+        self.companies = sorted(companies, key=performance)
         self.caps = np.ones((TransportRecord.TRANSPORT_COUNT,),
                             dtype=int) * TransportRecord.MAX_CAP
         self.dist_record = np.zeros((
@@ -407,10 +414,4 @@ def check_pickle(src: "list[str]", targets: "list[str]"):
 
 
 if __name__ == '__main__':
-    data_dire = 'data'
-    requests_csv = os.path.join(data_dire, 'requests.csv')
-    supply_csv = os.path.join(data_dire, 'supply.csv')
-    tc = TransicationRecord.from_csv(supply_csv, requests_csv)
-
-    # target = tc[139]
-    # print(target.burst_config.cooling_dura)
+    print(SrcType.A.unit_cost)

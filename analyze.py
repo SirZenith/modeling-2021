@@ -2,17 +2,27 @@ import csv
 import glob
 import os
 import math
+from typing import Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
+from numpy.core.fromnumeric import sort
 
 from modeling import check_pickle
 from modeling import StatusOfWeek, TransicationRecord, TransportRecord, TransportDistributor
 
+WEEK_COUNT = 24
+RESO_PRICE = 1500
+PROD_PRICE = 2300
+STORE_COST = 30
+TRANS_COST = 80
+
 
 def performance(r: TransicationRecord):
     """used globally for supplier evaluation."""
-    return r.supply.mean()**2 * np.exp(r.supply_rate.mean()) * (2 - r.supply_rate.var()) * r.requests[r.requests > 0].size / r.requests.size
+    sr_coeff = np.exp(r.supply_rate.mean()) * (2 - r.supply_rate.var())
+    active = r.requests[r.requests > 0].size / r.requests.size
+    return np.sqrt(r.supply.mean()**2 * sr_coeff * active) 
 
 
 def plot_all(tc: "list[TransicationRecord]"):
@@ -62,8 +72,8 @@ def performance_sort(tc: "list[TransicationRecord]", filename: str):
     tc.sort(key=performance, reverse=True)
     with open(filename, 'w+', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(['id', 'r_count', 'type', 's_rate_mean',
-                        's_rate_variance', 'long_s_rate', 's_delta', 'score'])
+        writer.writerow(['id', 'r_count', 'type', 's_mean', 's_rate_mean',
+                        's_rate_variance', 'long_s_rate', 's_delta', 'score_log'])
         for target in tc:
             writer.writerow([
                 target.id,
@@ -74,7 +84,7 @@ def performance_sort(tc: "list[TransicationRecord]", filename: str):
                 target.supply_rate.var(),
                 target.long_term_supply_rate,
                 target.supply_delta,
-                performance(target),
+                np.log(performance(target)),
             ])
 
 
@@ -108,36 +118,14 @@ def all_rate_leap(tc: "list[TransicationRecord]") -> "list[np.ndarray]":
     return results
 
 
-def transport_task_distribute(
+def requests(
     tc: "list[TransicationRecord]",
-    tp: "list[TransportRecord]",
-    input: str,
-    output: str=None,
-):
-    """read requests in input, and write transport plan to output."""
-    requests = None
-    with open(input, 'r', encoding='utf8') as f:
-        reader = csv.reader(f)
-        requests = [[int(i) for i in r] for r in reader]
-    requests = [(i, r) for i, r in zip(range(0, len(requests)), requests)]
-    requests.sort(key=lambda r: tc[r[0]].src_type)
-
-    distributor = TransportDistributor(tp)
-    for week_index in range(TransicationRecord.WEEK_COUNT):
-        distributor.reset()
-        for index, r in requests:
-            distributor.distribute(index, week_index, r[week_index])
-    if output:
-        with open(output, 'w+', encoding='utf8', newline='') as f:
-            writer = csv.writer(f)
-            for r in distributor.dist_record:
-                r = np.hstack(r)
-                writer.writerow(r)
-
-
-def question2(tc: "list[TransicationRecord]", output: str, draw: bool):
+    performance: Callable[[TransicationRecord], float],
+    storage_target: float,
+    output: str,
+    draw: bool,
+) -> np.ndarray:
     """generate requests for question 2"""
-    target_value = 3 * 2.82e4
 
     results = []
     this_week = StatusOfWeek()
@@ -150,13 +138,13 @@ def question2(tc: "list[TransicationRecord]", output: str, draw: bool):
         this_week.reset()
         for t in filter(lambda t: t.gini < gini_bound, tc[:ed]):
             # normal type supplier
-            if this_week.no_need_more(target_value):
+            if this_week.no_need_more(storage_target):
                 break
             this_week.request_to_normal(t)
 
         for t in filter(lambda t: t.gini >= gini_bound, tc[:ed]):
             # burst type supplier
-            if this_week.no_need_more(target_value):
+            if this_week.no_need_more(storage_target):
                 break
             if this_week.buy_next_time[t.id_int] > this_week.current_week:
                 continue
@@ -174,15 +162,11 @@ def question2(tc: "list[TransicationRecord]", output: str, draw: bool):
 
     results = np.array(results)
     results = results.T
-    count = 0
     if output:
         with open(output, 'w+', encoding='utf8', newline='') as f:
             writer = csv.writer(f)
             for r in results:
                 writer.writerow(r)
-                if np.any(r):
-                    count += 1
-    print(count)
     if draw:
         plt.figure()
         for r in results:
@@ -190,6 +174,61 @@ def question2(tc: "list[TransicationRecord]", output: str, draw: bool):
         plt.show()
     return results
 
+
+def read_requests(filename: str) -> "list[tuple(int, list[int])]":
+    with open(filename, 'r', encoding='utf8') as f:
+        reader = csv.reader(f)
+        requests = [[int(i) for i in r] for r in reader]
+    requests = [(i, r) for i, r in zip(range(0, len(requests)), requests)]
+    return requests
+
+
+def transport_task_distribute(
+    tc: "list[TransicationRecord]",
+    tp: "list[TransportRecord]",
+    input: str,
+    output: str=None,
+    performance: "Callable[[TransicationRecord], float]"=None,
+):
+    """read requests in input, and write transport plan to output."""
+    global WEEK_COUNT
+    requests = read_requests(input)
+    requests.sort(key=lambda r: tc[r[0]].src_type)
+
+    distributor = TransportDistributor(tp, performance)
+    for week_index in range(WEEK_COUNT):
+        distributor.reset()
+        for index, r in requests:
+            distributor.distribute(index, week_index, r[week_index])
+    if output:
+        with open(output, 'w+', encoding='utf8', newline='') as f:
+            writer = csv.writer(f)
+            for r in distributor.dist_record:
+                r = np.hstack(r)
+                writer.writerow(r)
+
+
+def accountant(tc: "list[TransicationRecord]", input: str) -> list[int]:
+    global WEEK_COUNT
+    requests = read_requests(input)
+    results = []
+    for week_index in range(WEEK_COUNT):
+        production = 0
+        storage = 0
+        bill = 0
+        transport = 0
+        for index, r in requests:
+            amount = r[week_index]
+            unit_cost = tc[index].src_type.unit_cost
+            price = tc[index].src_type.price
+
+            production += amount / unit_cost
+            storage += amount
+            bill += amount * price
+            transport += amount
+        total = production * PROD_PRICE - bill * RESO_PRICE - storage * STORE_COST - transport * TRANS_COST
+        results.append((week_index + 1, production, storage, bill, transport, total))
+    return results
 
 if __name__ == '__main__':
     import argparse
@@ -200,7 +239,7 @@ if __name__ == '__main__':
 
     targets = [transication_bin, transication_bin]
     src = glob.glob(os.path.join(data_dire, '*.csv')) + [
-        'csv_pickle.py', 'modeling.py'
+        'modeling.py'
     ]
     check_pickle(src, targets)
 
@@ -214,7 +253,7 @@ if __name__ == '__main__':
                         help='plotting storage amount of resource during all weeks.')
     parser.add_argument('-o', '--output', default=None, type=str,
                         metavar='<file name>', help='output file name, if a command support writing file, this name is used.')
-    parser.add_argument('-i', '--intput', default=None, type=str,
+    parser.add_argument('-i', '--input', default=None, type=str,
                         metavar='<file name>', help='input file name, if a command needs reading data, this name is used.')
     parser.add_argument('--info', default=None, type=int,
                         metavar='<id>', help='print out information for supplier with given integer id.')
@@ -232,15 +271,17 @@ if __name__ == '__main__':
                         metavar="<number>", help='give request paln for given question (2, 3, 4). Result will be written into csv file if flag -o (--output) is passed.')
     parser.add_argument('-D', '--image', action='store_true',
                         help='drawing image while giving request solution.')
-    parser.add_argument('-t', '--transport', default=None, type=str,
-                        metavar="<number>", help='generate transport plan for given requests plan. Requests are give in csv format, with each line recording all request to one supplier during all weeks.')
+    parser.add_argument('-t', '--transport', action='store_true',
+                        help='generate transport plan for given requests plan. Requests are give in csv format, with each line recording all request to one supplier during all weeks.')
+    parser.add_argument('-a', '--accountant', action='store_true',
+                        help='making account for each week for a given request data, request data is read from csv file. Output can be write to csv file, or print on screen.')
 
     args = parser.parse_args()
     if args.all_plot:
         plot_all(tc)
     elif args.plot is not None:
         make_plot(tc[args.plot - 1])
-    if args.sorted_info is not None:
+    if args.sorted_info:
         performance_sort(tc, args.output)
     if args.info is not None:
         printinfo(tc[args.info - 1])
@@ -282,11 +323,41 @@ if __name__ == '__main__':
                 tc[i].burst_config.max_burst_output
             ))
     if args.solve is not None:
-        solutions = (
+        perf_func = (
             None,
             None,
-            question2,
+            performance,
+            lambda t:
+                performance(t)(1 / t.src_type.unit_cost * PROD_PRICE - t.src_type.price * RESO_PRICE - STORE_COST - TRANS_COST),
         )
-        solutions[args.solve](tc, args.output, args.image)
-    if args.transport is not None:
+        storage_targets = (
+            None,
+            None,
+            3 * 2.82e4,
+            3 * 2.82e4
+        )
+        requests(
+            tc,
+            perf_func[args.solve],
+            storage_targets[args.solve], 
+            args.output, 
+            args.image
+        )
+    if args.transport:
         transport_task_distribute(tc, tp, args.input, args.output)
+    if args.accountant:
+        results = accountant(tc, args.input)
+        if args.output:
+            with open(args.output, 'w', encoding='utf8', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow((
+                    'week', 'production', 'storage', 'bill', 'transport'
+                ))
+                writer.writerows(results)
+        else:
+            print('{:^4} | {:^10} | {:^7} | {:^10} | {:^9} | {:^15}'.format(
+                'week', 'production', 'storage', 'bill', 'transport', 'total'
+            ))
+            for r in results:
+                print('{:4} | {:10.2f} | {:7} | {:10.2f} | {:9} | {:^15.2f}'.format(*r))
+            print(sum(r[-1] for r in results))
