@@ -354,7 +354,9 @@ class TransportDistributor(object):
     ):
         if not performance:
             def performance(t):
-                return t.data.mean()
+                mask = t.data >= 1
+                return (t.data[mask]).mean()
+        self.performance = performance
         self.companies = sorted(companies, key=performance)
         self.caps = np.ones((TransportRecord.TRANSPORT_COUNT,),
                             dtype=int) * TransportRecord.MAX_CAP
@@ -417,4 +419,24 @@ def check_pickle(src: "list[str]", targets: "list[str]"):
 
 
 if __name__ == '__main__':
-    print(SrcType.A.unit_cost)
+    data_dire = 'data'
+    transication_bin = os.path.join(data_dire, 'transication.bin')
+    transport_bin = os.path.join(data_dire, 'transport.bin')
+
+    targets = [transication_bin, transication_bin]
+    src = glob.glob(os.path.join(data_dire, '*.csv')) + [
+        'modeling.py'
+    ]
+    check_pickle(src, targets)
+
+    tc = TransicationRecord.from_pickled(transication_bin)
+    tp = TransportRecord.from_pickled(transport_bin)
+    
+    with open('ans/transport_company_data.csv', 'w', encoding='utf8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(('id', 'mean', 'variance'))
+        writer.writerows((i + 1, data.mean(), data.var())
+        for i, data in enumerate(map(
+            lambda t: t.data[t.data >= 1],
+            tp
+        )))
