@@ -1,9 +1,10 @@
 import csv
 from enum import Enum
+import enum
 import glob
 import os
 import pickle
-from typing import Type
+from typing import Callable, Type
 
 import numpy as np
 
@@ -254,10 +255,6 @@ class TransportRecord(Record):
     TRANSPORT_COUNT = 8
     MAX_CAP = 6000
 
-    @classmethod
-    def max_cap(cls):
-        return cls.TRANSPORT_COUNT * cls.MAX_CAP
-
     def __init__(self, id: str, data: "list[float]"):
         self.id = id
         self.data = np.array(data)
@@ -286,32 +283,32 @@ class StatusOfWeek():
         self.buy_next_time is a list of length 402, which record the supplier you should buy next time
         self.can_trans
     '''
-    SOURCE_COST = 2.82e4
 
-    def __init__(self):
+    def __init__(self, source_cost):
         self.inventory = 0
         self.requests = np.zeros(402, dtype=int)
         self.expect_supply = np.zeros(402, dtype=int)
         self.current_week = 0
         self.buy_next_time = np.zeros(402, dtype=int)
         self.burst_count = np.zeros(402, dtype=int)
-        self.can_trans = TransportRecord.max_cap()
+        self.can_trans = TransportRecord.MAX_CAP * TransportRecord.TRANSPORT_COUNT
+        self.source_cost = source_cost
 
     def producing(self):
-        self.inventory -= StatusOfWeek.SOURCE_COST
+        self.inventory -= self.source_cost
 
     def reset(self):
         self.reset_can_trans()
         self.reset_requests()
 
     def reset_can_trans(self):
-        self.can_trans = TransportRecord.max_cap()
-    
+        self.can_trans = TransportRecord.MAX_CAP * TransportRecord.TRANSPORT_COUNT
+
     def reset_requests(self):
         self.requests[:] = 0
 
-    def no_need_more(self, target_value: int):
-        return self.inventory >= target_value or self.can_trans <= 0
+    def no_need_more(self):
+        return self.inventory >= self.source_cost * 3 or self.can_trans <= 0
 
     def request_to_normal(self, t: TransicationRecord):
         """sending a request to a normal-type supplier"""
@@ -346,11 +343,78 @@ class StatusOfWeek():
             self.buy_next_time[id] = self.current_week + conf.cooling_dura
 
 
-if __name__ == '__main__':
+class TransportDistributor(object):
+    """TransportDistributor is used to distribute transport task among transport
+    companies."""
+
+    def __init__(
+        self,
+        companies: "list[TransportRecord]",
+        performance: "Callable[[TransicationRecord], float]"=None
+    ):
+        if not performance:
+            def performance(t):
+                return t.data.mean()
+        self.companies = sorted(companies, key=performance)
+        self.caps = np.ones((TransportRecord.TRANSPORT_COUNT,),
+                            dtype=int) * TransportRecord.MAX_CAP
+        self.dist_record = np.zeros((
+            TransicationRecord.SUPPLIER_COUNT,
+            24,
+            TransportRecord.TRANSPORT_COUNT
+        ), dtype=int)
+
+    def reset(self):
+        self.caps[:] = TransportRecord.MAX_CAP
+
+    def distribute(self, index, week_index, amount: int):
+        """use better transport company first"""
+        while amount > 0:
+            partition = min(amount, self.caps.max())
+            target = self.dist_to_single(partition)
+            if target is None:
+                raise ValueError('failed to distribute request of S{} at week {}.'.format(
+                    index + 1,
+                    week_index
+                ))
+            self.dist_record[index, week_index, target] = partition
+            self.caps[target] -= partition
+            amount -= partition
+
+    def dist_to_single(self, amount):
+        """try to distribute task to a single transport company"""
+        for i, c in enumerate(self.caps):
+            if c < amount:
+                continue
+            return i
+        return None
+
+
+def csv_pickle():
+    """read data from csv file and sotre object built based on those data into
+    pickled binary file for latter reuse."""
     data_dire = 'data'
     requests_csv = os.path.join(data_dire, 'requests.csv')
     supply_csv = os.path.join(data_dire, 'supply.csv')
-    tc = TransicationRecord.from_csv(supply_csv, requests_csv)
+    transport_csv = os.path.join(data_dire, 'transport.csv')
 
-    # target = tc[139]
-    # print(target.burst_config.cooling_dura)
+    tc = TransicationRecord.from_csv(supply_csv, requests_csv)
+    tp = TransportRecord.from_csv(transport_csv)
+
+    Record.to_pickled(os.path.join(data_dire, 'transication.bin'), tc)
+    Record.to_pickled(os.path.join(data_dire, 'transport.bin'), tp)
+
+
+def check_pickle(src: "list[str]", targets: "list[str]"):
+    """automatically pickle data if any of src file is newer than target files"""
+    src_time = np.array([os.path.getmtime(item) for item in src])
+    targets_time = np.array([os.path.getmtime(item) for item in targets])
+    for time in targets_time:
+        if np.any(src_time > time):
+            csv_pickle()
+            print('new pickle data were successfully made.')
+            break
+
+
+if __name__ == '__main__':
+    print(SrcType.A.unit_cost)
