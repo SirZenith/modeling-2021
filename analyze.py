@@ -131,7 +131,7 @@ def requests(
     this_week = StatusOfWeek(weekly_source_cost)
     tc.sort(key=performance, reverse=True)
 
-    ed = 402  # temporary putting this data
+    ed = 36  # temporary putting this data
     gini_bound = 0.5
 
     for _ in range(24):
@@ -229,6 +229,7 @@ def accountant(tc: "list[TransicationRecord]", input: str) -> list[int]:
         total = production * PROD_PRICE - bill * RESO_PRICE - storage * STORE_COST - transport * TRANS_COST
         results.append((week_index + 1, production, storage, bill, transport, total))
     return results
+
 
 if __name__ == '__main__':
     import argparse
@@ -329,7 +330,8 @@ if __name__ == '__main__':
             performance,
             lambda t:
                 performance(t) * (1 / t.src_type.unit_cost * PROD_PRICE - t.src_type.price * RESO_PRICE - STORE_COST - TRANS_COST),
-            performance,
+            lambda t:
+                performance(t) * (1 / t.src_type.unit_cost * PROD_PRICE - t.src_type.price * RESO_PRICE - STORE_COST - TRANS_COST),
         )
         weekly_source_cost = (
             None,
@@ -353,7 +355,7 @@ if __name__ == '__main__':
             with open(args.output, 'w', encoding='utf8', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow((
-                    'week', 'production', 'storage', 'bill', 'transport'
+                    'week', 'production', 'storage', 'bill', 'transport', 'total'
                 ))
                 writer.writerows(results)
         else:
