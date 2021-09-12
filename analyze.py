@@ -131,13 +131,8 @@ def requests(
     this_week = StatusOfWeek(weekly_source_cost)
     tc.sort(key=performance, reverse=True)
 
-<<<<<<< HEAD
-    ed = 36  # temporary putting this data
-    gini_bound = 0.4
-=======
     ed = 402  # temporary putting this data
     gini_bound = 0.5
->>>>>>> 8db110c8ec6f5411b6d3bf0525a7ae0e483f6b33
 
     for _ in range(24):
         this_week.reset()
@@ -213,7 +208,7 @@ def transport_task_distribute(
                 writer.writerow(r)
 
 
-def accountant(tc: "list[TransicationRecord]", input: str) -> list[int]:
+def accountant(tc: "list[TransicationRecord]", input: str):
     global WEEK_COUNT
     requests = read_requests(input)
     results = []
