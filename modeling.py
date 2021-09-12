@@ -347,7 +347,7 @@ class TransportDistributor(object):
     def __init__(self, companies: "list[TransportRecord]"):
         self.companies = sorted(companies, key=lambda t: t.data.mean())
         self.caps = np.ones((TransportRecord.TRANSPORT_COUNT,),
-                           dtype=int) * TransportRecord.MAX_CAP
+                            dtype=int) * TransportRecord.MAX_CAP
         self.dist_record = np.zeros((
             TransicationRecord.SUPPLIER_COUNT,
             24,
@@ -370,7 +370,7 @@ class TransportDistributor(object):
             self.dist_record[index, week_index, target] = partition
             self.caps[target] -= partition
             amount -= partition
-    
+
     def dist_to_single(self, amount):
         """try to distribute task to a single transport company"""
         for i, c in enumerate(self.caps):
@@ -378,6 +378,32 @@ class TransportDistributor(object):
                 continue
             return i
         return None
+
+
+def csv_pickle():
+    """read data from csv file and sotre object built based on those data into
+    pickled binary file for latter reuse."""
+    data_dire = 'data'
+    requests_csv = os.path.join(data_dire, 'requests.csv')
+    supply_csv = os.path.join(data_dire, 'supply.csv')
+    transport_csv = os.path.join(data_dire, 'transport.csv')
+
+    tc = TransicationRecord.from_csv(supply_csv, requests_csv)
+    tp = TransportRecord.from_csv(transport_csv)
+
+    Record.to_pickled(os.path.join(data_dire, 'transication.bin'), tc)
+    Record.to_pickled(os.path.join(data_dire, 'transport.bin'), tp)
+
+
+def check_pickle(src: "list[str]", targets: "list[str]"):
+    """automatically pickle data if any of src file is newer than target files"""
+    src_time = np.array([os.path.getmtime(item) for item in src])
+    targets_time = np.array([os.path.getmtime(item) for item in targets])
+    for time in targets_time:
+        if np.any(src_time > time):
+            csv_pickle()
+            print('new pickle data were successfully made.')
+            break
 
 
 if __name__ == '__main__':

@@ -6,8 +6,8 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 
-from csv_pickle import check_pickle
-from modeling import StatusOfWeek, TransicationRecord, TransportRecord
+from modeling import check_pickle
+from modeling import StatusOfWeek, TransicationRecord, TransportRecord, TransportDistributor
 
 
 def performance(r: TransicationRecord):
@@ -16,18 +16,8 @@ def performance(r: TransicationRecord):
 
 
 def plot_all(tc: "list[TransicationRecord]"):
+    """draw plot for some information of all time/all supplier wide"""
     plt.figure()
-    # value = np.array([
-    #     sum(t.supply[i] / t.src_type.unit_cost for t in tc)
-    #     for i in range(TransicationRecord.WEEK_COUNT)
-    # ])
-    # plt.plot(value)
-    # plt.plot([value.mean()] * TransicationRecord.WEEK_COUNT)
-    # print(value.mean())
-    # for t in tc:
-    # if t.gini > 0.3:
-    #     continuew
-    # plt.plot(t.supply)
     sum = np.zeros(TransicationRecord.WEEK_COUNT)
     for t in tc:
         sum += t.supply
@@ -67,8 +57,8 @@ def make_plot(target: TransicationRecord):
     plt.show()
 
 
-def write_csv(tc: "list[TransicationRecord]", filename: str):
-    """write data into csv file after sort input by performance function."""
+def performance_sort(tc: "list[TransicationRecord]", filename: str):
+    """write data into csv file after sortting input by performance function."""
     tc.sort(key=performance, reverse=True)
     with open(filename, 'w+', newline='') as f:
         writer = csv.writer(f)
@@ -116,6 +106,31 @@ def all_rate_leap(tc: "list[TransicationRecord]") -> "list[np.ndarray]":
         diff = rate_leap(t)
         results.append(diff)
     return results
+
+
+def transport_task_distribute(
+    tc: "list[TransicationRecord]",
+    tp: "list[TransportRecord]",
+    output: str,
+):
+    requests = None
+    with open('ans/q4.csv', 'r', encoding='utf8') as f:
+        reader = csv.reader(f)
+        requests = [[int(i) for i in r] for r in reader]
+    requests = [(i, r) for i, r in zip(range(0, len(requests)), requests)]
+    requests.sort(key=lambda r: tc[r[0]].src_type)
+
+    distributor = TransportDistributor(tp)
+    for week_index in range(TransicationRecord.WEEK_COUNT):
+        distributor.reset()
+        for index, r in requests:
+            distributor.distribute(index, week_index, r[week_index])
+    if output:
+        with open(output, 'w+', encoding='utf8', newline='') as f:
+            writer = csv.writer(f)
+            for r in distributor.dist_record:
+                r = np.hstack(r)
+                writer.writerow(r)
 
 
 def question2(tc: "list[TransicationRecord]", output: str, draw: bool):
@@ -188,41 +203,43 @@ if __name__ == '__main__':
     check_pickle(src, targets)
 
     tc = TransicationRecord.from_pickled(transication_bin)
+    tp = TransportRecord.from_pickled(transport_bin)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--plot', default=None, type=int,
-                        metavar='<id>', help='plot data with given supplier id.')
+                        metavar='<id>', help='plotting data for supplier with given integer supplier id.')
     parser.add_argument('-P', '--all-plot', action='store_true', dest='all_plot',
-                        help='plot data with given supplier id.')
+                        help='plotting storage amount of resource during all weeks.')
     parser.add_argument('-o', '--output', default=None, type=str,
-                        metavar='<file name>', help='write data to csv file')
+                        metavar='<file name>', help='output file name, if a command support writing file, this name is used.')
     parser.add_argument('-i', '--info', default=None, type=int,
-                        metavar='<id>', help='print infomation with given id.')
-    parser.add_argument('-d', '--diff', action='store_true')
-
+                        metavar='<id>', help='print out information for supplier with given integer id.')
+    parser.add_argument('-I', '--sorted-info', action='store_true', dest='sorted_info',
+                        help='write supplier infoamtion list sorted by performance into file..')
     parser.add_argument('-l', '--leap', default=None, type=int,
-                        metavar='<id>', help='compute leap value in requests amount')
+                        metavar='<id>', help='find supply rate irregular leap point in supplier\'s supply record data.')
     parser.add_argument('-L', '--all-leap', action='store_true', dest='all_leap',
-                        help='drawing scatter plot for leap point count for all supplier')
-    parser.add_argument('-g', '--gini', default=None, type=int,
-                        metavar='<id>', help='compute Gini coeffectient of a given supplier')
+                        help='drawing scatter plot for leap point count of all supplier.')
     parser.add_argument('-e', '--explosive', action='store_true',
-                        help='sort the supplier with its explosion')
+                        help='print out supplier list sorted by irregular leap point count.')
+    parser.add_argument('-g', '--gini', default=None, type=int,
+                        metavar='<id>', help='compute Gini coeffectient for supplier with given integer id.')
     parser.add_argument('-s', '--solve', default=None, type=int,
-                        metavar="<number>", help='give solution for give question')
+                        metavar="<number>", help='give request paln for given question (2, 3, 4). Result will be written into csv file if flag -o (--output) is passed.')
     parser.add_argument('-D', '--image', action='store_true',
-                        help='drawing image for solution')
+                        help='drawing image while giving request solution.')
+    parser.add_argument('-t', '--transport', default=None, type=str,
+                        metavar="<number>", help='generate transport plan for given requests plan. Requests are give in csv format, with each line recording all request to one supplier during all weeks.')
 
     args = parser.parse_args()
     if args.all_plot:
         plot_all(tc)
     elif args.plot is not None:
         make_plot(tc[args.plot - 1])
-    if args.output is not None:
-        write_csv(tc, args.output)
+    if args.sorted_info is not None:
+        performance_sort(tc, args.output)
     if args.info is not None:
         printinfo(tc[args.info - 1])
-
     if args.leap is not None:
         target = tc[args.leap - 1]
         leap = rate_leap(target)
@@ -243,14 +260,12 @@ if __name__ == '__main__':
             print(f'{i}: {leap_count[i - 1]}')
         print(np.mean(leap_count))
         plt.show()
-
     if args.gini is not None:
         gini, x, y = tc[args.gini - 1].compute_gini()
         print(gini)
         plt.plot(x, y)
         plt.plot(x, x)  # 均衡曲线
         plt.show()
-
     if args.explosive:
         tc.sort(key=lambda x: x.gini * math.log(x.supply_rate.mean())
                 * x.supply.mean() * x.long_term_supply_rate, reverse=True)
@@ -262,7 +277,6 @@ if __name__ == '__main__':
                 tc[i].burst_config.cooling_dura,
                 tc[i].burst_config.max_burst_output
             ))
-
     if args.solve is not None:
         solutions = (
             None,
@@ -270,3 +284,5 @@ if __name__ == '__main__':
             question2,
         )
         solutions[args.solve](tc, args.output, args.image)
+    if args.transport is not None:
+        transport_task_distribute(tc, tp, args.output)
