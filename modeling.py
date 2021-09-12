@@ -280,9 +280,8 @@ class StatusOfWeek():
         self.buy_next_time is a list of length 402, which record the supplier you should buy next time
         self.can_trans
     '''
-    SOURCE_COST = 2.82e4
 
-    def __init__(self):
+    def __init__(self, source_cost):
         self.inventory = 0
         self.requests = np.zeros(402, dtype=int)
         self.expect_supply = np.zeros(402, dtype=int)
@@ -290,9 +289,10 @@ class StatusOfWeek():
         self.buy_next_time = np.zeros(402, dtype=int)
         self.burst_count = np.zeros(402, dtype=int)
         self.can_trans = TransportRecord.MAX_CAP * TransportRecord.TRANSPORT_COUNT
+        self.source_cost = source_cost
 
     def producing(self):
-        self.inventory -= StatusOfWeek.SOURCE_COST
+        self.inventory -= self.source_cost
 
     def reset(self):
         self.reset_can_trans()
@@ -304,8 +304,8 @@ class StatusOfWeek():
     def reset_requests(self):
         self.requests[:] = 0
 
-    def no_need_more(self, target_value: int):
-        return self.inventory >= target_value or self.can_trans <= 0
+    def no_need_more(self):
+        return self.inventory >= self.source_cost * 3 or self.can_trans <= 0
 
     def request_to_normal(self, t: TransicationRecord):
         """sending a request to a normal-type supplier"""

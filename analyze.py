@@ -12,8 +12,8 @@ from modeling import check_pickle
 from modeling import StatusOfWeek, TransicationRecord, TransportRecord, TransportDistributor
 
 WEEK_COUNT = 24
-RESO_PRICE = 1500
-PROD_PRICE = 2300
+RESO_PRICE = 800
+PROD_PRICE = 1000
 STORE_COST = 30
 TRANS_COST = 80
 
@@ -121,30 +121,30 @@ def all_rate_leap(tc: "list[TransicationRecord]") -> "list[np.ndarray]":
 def requests(
     tc: "list[TransicationRecord]",
     performance: Callable[[TransicationRecord], float],
-    storage_target: float,
+    weekly_source_cost: float,
     output: str,
     draw: bool,
 ) -> np.ndarray:
     """generate requests for question 2"""
 
     results = []
-    this_week = StatusOfWeek()
+    this_week = StatusOfWeek(weekly_source_cost)
     tc.sort(key=performance, reverse=True)
 
-    ed = 240  # temporary putting this data
+    ed = 402  # temporary putting this data
     gini_bound = 0.5
 
     for _ in range(24):
         this_week.reset()
         for t in filter(lambda t: t.gini < gini_bound, tc[:ed]):
             # normal type supplier
-            if this_week.no_need_more(storage_target):
+            if this_week.no_need_more():
                 break
             this_week.request_to_normal(t)
 
         for t in filter(lambda t: t.gini >= gini_bound, tc[:ed]):
             # burst type supplier
-            if this_week.no_need_more(storage_target):
+            if this_week.no_need_more():
                 break
             if this_week.buy_next_time[t.id_int] > this_week.current_week:
                 continue
@@ -328,18 +328,20 @@ if __name__ == '__main__':
             None,
             performance,
             lambda t:
-                performance(t)(1 / t.src_type.unit_cost * PROD_PRICE - t.src_type.price * RESO_PRICE - STORE_COST - TRANS_COST),
+                performance(t) * (1 / t.src_type.unit_cost * PROD_PRICE - t.src_type.price * RESO_PRICE - STORE_COST - TRANS_COST),
+            performance,
         )
-        storage_targets = (
+        weekly_source_cost = (
             None,
             None,
-            3 * 2.82e4,
-            3 * 2.82e4
+            2.82e4,
+            2.82e4,
+            3.172e4,
         )
         requests(
             tc,
             perf_func[args.solve],
-            storage_targets[args.solve], 
+            weekly_source_cost[args.solve], 
             args.output, 
             args.image
         )
@@ -360,4 +362,6 @@ if __name__ == '__main__':
             ))
             for r in results:
                 print('{:4} | {:10.2f} | {:7} | {:10.2f} | {:9} | {:^15.2f}'.format(*r))
-            print(sum(r[-1] for r in results))
+            total = sum(r[-1] for r in results)
+            print('in-come sum:', total)
+            print('avg:', total / 24)
