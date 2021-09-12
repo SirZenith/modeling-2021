@@ -111,10 +111,12 @@ def all_rate_leap(tc: "list[TransicationRecord]") -> "list[np.ndarray]":
 def transport_task_distribute(
     tc: "list[TransicationRecord]",
     tp: "list[TransportRecord]",
-    output: str,
+    input: str,
+    output: str=None,
 ):
+    """read requests in input, and write transport plan to output."""
     requests = None
-    with open('ans/q4.csv', 'r', encoding='utf8') as f:
+    with open(input, 'r', encoding='utf8') as f:
         reader = csv.reader(f)
         requests = [[int(i) for i in r] for r in reader]
     requests = [(i, r) for i, r in zip(range(0, len(requests)), requests)]
@@ -212,9 +214,11 @@ if __name__ == '__main__':
                         help='plotting storage amount of resource during all weeks.')
     parser.add_argument('-o', '--output', default=None, type=str,
                         metavar='<file name>', help='output file name, if a command support writing file, this name is used.')
-    parser.add_argument('-i', '--info', default=None, type=int,
+    parser.add_argument('-i', '--intput', default=None, type=str,
+                        metavar='<file name>', help='input file name, if a command needs reading data, this name is used.')
+    parser.add_argument('--info', default=None, type=int,
                         metavar='<id>', help='print out information for supplier with given integer id.')
-    parser.add_argument('-I', '--sorted-info', action='store_true', dest='sorted_info',
+    parser.add_argument('--sorted-info', action='store_true', dest='sorted_info',
                         help='write supplier infoamtion list sorted by performance into file..')
     parser.add_argument('-l', '--leap', default=None, type=int,
                         metavar='<id>', help='find supply rate irregular leap point in supplier\'s supply record data.')
@@ -285,4 +289,4 @@ if __name__ == '__main__':
         )
         solutions[args.solve](tc, args.output, args.image)
     if args.transport is not None:
-        transport_task_distribute(tc, tp, args.output)
+        transport_task_distribute(tc, tp, args.input, args.output)
