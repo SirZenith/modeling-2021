@@ -218,8 +218,8 @@ class TransicationRecord(Record):
 
         s_local_mean = np.convolve(conv_local, self.supply, mode='same')
         self.supply_burst = self.supply > s_local_mean * 1.5
-        plt.plot(s_local_mean)
-        plt.show()
+        # plt.plot(s_local_mean)
+        # plt.show()
 
     @property
     def co(self):
